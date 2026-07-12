@@ -1,0 +1,538 @@
+2026-07-10 09:17:25,013 - INFO - === Reddit Scraper Started ===
+2026-07-10 09:17:25,013 - INFO - Opening URL: https://www.reddit.com/r/MachineLearning/
+2026-07-10 09:17:46,559 - INFO - Scrolling page... 1/6
+2026-07-10 09:17:50,041 - INFO - Scrolling page... 2/6
+2026-07-10 09:17:52,161 - INFO - Scrolling page... 3/6
+2026-07-10 09:17:54,177 - INFO - Scrolling page... 4/6
+2026-07-10 09:17:56,564 - INFO - Scrolling page... 5/6
+2026-07-10 09:17:58,582 - INFO - Scrolling page... 6/6
+2026-07-10 09:18:04,832 - INFO - Screenshot saved: C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\screenshot.png
+2026-07-10 09:18:05,036 - INFO - HTML saved to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit.html
+2026-07-10 09:18:05,252 - INFO - Extracted 52 posts from feed.
+2026-07-10 09:18:05,255 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit.json
+2026-07-10 09:18:05,270 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit.csv
+2026-07-10 09:18:05,271 - INFO - Feed scraping completed successfully.
+2026-07-10 09:18:05,272 - INFO - === Reddit Scraper Finished ===
+2026-07-10 09:25:07,376 - INFO - === Reddit Scraper Started ===
+2026-07-10 09:25:07,376 - INFO - Opening URL: https://www.reddit.com/r/MachineLearning/
+2026-07-10 09:25:14,102 - INFO - Scrolling page... 1/6
+2026-07-10 09:25:16,187 - INFO - Scrolling page... 2/6
+2026-07-10 09:25:20,121 - INFO - Scrolling page... 3/6
+2026-07-10 09:25:22,146 - INFO - Scrolling page... 4/6
+2026-07-10 09:25:24,221 - INFO - Scrolling page... 5/6
+2026-07-10 09:25:26,887 - INFO - Scrolling page... 6/6
+2026-07-10 09:25:37,440 - INFO - Screenshot saved to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\screenshot.png
+2026-07-10 09:25:38,275 - INFO - HTML saved to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit.html
+2026-07-10 09:25:38,469 - INFO - Extracted 52 posts from feed.
+2026-07-10 09:25:38,472 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit.json
+2026-07-10 09:25:38,482 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit.csv
+2026-07-10 09:25:38,525 - INFO - === Reddit Scraper Finished ===
+2026-07-10 09:29:36,193 - INFO - === Reddit Scraper Started ===
+2026-07-10 09:29:36,193 - INFO - Opening URL: https://www.reddit.com/r/MachineLearning/
+2026-07-10 09:29:43,099 - INFO - Scrolling page... 1/5
+2026-07-10 09:29:45,119 - INFO - Scrolling page... 2/5
+2026-07-10 09:29:47,194 - INFO - Scrolling page... 3/5
+2026-07-10 09:29:49,268 - INFO - Scrolling page... 4/5
+2026-07-10 09:29:51,298 - INFO - Scrolling page... 5/5
+2026-07-10 09:29:57,864 - INFO - Screenshot saved to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\screenshot.png
+2026-07-10 09:29:58,724 - INFO - Feed HTML saved to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit.html
+2026-07-10 09:29:58,896 - INFO - Extracted 51 post links from subreddit feed.
+2026-07-10 09:29:58,897 - INFO - Scraping post 1/5: https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread
+2026-07-10 09:29:58,897 - INFO - Opening URL: https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread
+2026-07-10 09:30:05,641 - INFO - Scrolling page... 1/8
+2026-07-10 09:30:07,654 - INFO - Scrolling page... 2/8
+2026-07-10 09:30:09,688 - INFO - Scrolling page... 3/8
+2026-07-10 09:30:11,749 - INFO - Scrolling page... 4/8
+2026-07-10 09:30:13,787 - INFO - Scrolling page... 5/8
+2026-07-10 09:30:15,823 - INFO - Scrolling page... 6/8
+2026-07-10 09:30:17,855 - INFO - Scrolling page... 7/8
+2026-07-10 09:30:19,892 - INFO - Scrolling page... 8/8
+2026-07-10 09:30:24,729 - INFO - Extracted post + 3 comments/replies from post page.
+2026-07-10 09:30:24,734 - INFO - Scraping post 2/5: https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired
+2026-07-10 09:30:24,734 - INFO - Opening URL: https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired
+2026-07-10 09:30:31,984 - INFO - Scrolling page... 1/8
+2026-07-10 09:30:34,023 - INFO - Scrolling page... 2/8
+2026-07-10 09:30:36,048 - INFO - Scrolling page... 3/8
+2026-07-10 09:30:38,078 - INFO - Scrolling page... 4/8
+2026-07-10 09:30:40,115 - INFO - Scrolling page... 5/8
+2026-07-10 09:30:42,149 - INFO - Scrolling page... 6/8
+2026-07-10 09:30:44,178 - INFO - Scrolling page... 7/8
+2026-07-10 09:30:46,216 - INFO - Scrolling page... 8/8
+2026-07-10 09:30:51,008 - INFO - Extracted post + 3 comments/replies from post page.
+2026-07-10 09:30:51,012 - INFO - Scraping post 3/5: https://www.reddit.com/r/MachineLearning/comments/1ufdzsr/optimising_lmapf_guidance_graphs_using
+2026-07-10 09:30:51,013 - INFO - Opening URL: https://www.reddit.com/r/MachineLearning/comments/1ufdzsr/optimising_lmapf_guidance_graphs_using
+2026-07-10 09:30:57,303 - INFO - Scrolling page... 1/8
+2026-07-10 09:30:59,314 - INFO - Scrolling page... 2/8
+2026-07-10 09:31:01,323 - INFO - Scrolling page... 3/8
+2026-07-10 09:31:03,372 - INFO - Scrolling page... 4/8
+2026-07-10 09:31:05,404 - INFO - Scrolling page... 5/8
+2026-07-10 09:31:07,438 - INFO - Scrolling page... 6/8
+2026-07-10 09:31:09,470 - INFO - Scrolling page... 7/8
+2026-07-10 09:31:11,504 - INFO - Scrolling page... 8/8
+2026-07-10 09:31:16,216 - INFO - Extracted post + 0 comments/replies from post page.
+2026-07-10 09:31:16,219 - INFO - Scraping post 4/5: https://www.reddit.com/r/MachineLearning/comments/1ubv0f5/ema_on_lora_r
+2026-07-10 09:31:16,219 - INFO - Opening URL: https://www.reddit.com/r/MachineLearning/comments/1ubv0f5/ema_on_lora_r
+2026-07-10 09:31:22,678 - INFO - Scrolling page... 1/8
+2026-07-10 09:31:24,701 - INFO - Scrolling page... 2/8
+2026-07-10 09:31:26,712 - INFO - Scrolling page... 3/8
+2026-07-10 09:31:28,729 - INFO - Scrolling page... 4/8
+2026-07-10 09:31:30,763 - INFO - Scrolling page... 5/8
+2026-07-10 09:31:32,795 - INFO - Scrolling page... 6/8
+2026-07-10 09:31:34,831 - INFO - Scrolling page... 7/8
+2026-07-10 09:31:36,863 - INFO - Scrolling page... 8/8
+2026-07-10 09:31:41,755 - INFO - Extracted post + 0 comments/replies from post page.
+2026-07-10 09:31:41,757 - INFO - Scraping post 5/5: https://www.reddit.com/r/MachineLearning/comments/1upqghy/masked_depth_modeling_with_sensorvalidity_masking
+2026-07-10 09:31:41,757 - INFO - Opening URL: https://www.reddit.com/r/MachineLearning/comments/1upqghy/masked_depth_modeling_with_sensorvalidity_masking
+2026-07-10 09:31:48,200 - INFO - Scrolling page... 1/8
+2026-07-10 09:31:50,225 - INFO - Scrolling page... 2/8
+2026-07-10 09:31:52,249 - INFO - Scrolling page... 3/8
+2026-07-10 09:31:54,279 - INFO - Scrolling page... 4/8
+2026-07-10 09:31:56,313 - INFO - Scrolling page... 5/8
+2026-07-10 09:31:58,346 - INFO - Scrolling page... 6/8
+2026-07-10 09:32:00,382 - INFO - Scrolling page... 7/8
+2026-07-10 09:32:02,416 - INFO - Scrolling page... 8/8
+2026-07-10 09:32:07,261 - INFO - Extracted post + 1 comments/replies from post page.
+2026-07-10 09:32:07,287 - INFO - === Reddit Scraper Finished ===
+2026-07-10 09:36:24,445 - INFO - === Reddit Scraper V2 Started ===
+2026-07-10 09:36:27,000 - INFO - Opening subreddit: https://www.reddit.com/r/MachineLearning/
+2026-07-10 09:36:31,415 - INFO - Scrolling page... 1/5
+2026-07-10 09:36:33,007 - INFO - Scrolling page... 2/5
+2026-07-10 09:36:34,572 - INFO - Scrolling page... 3/5
+2026-07-10 09:36:36,482 - INFO - Scrolling page... 4/5
+2026-07-10 09:36:37,996 - INFO - Scrolling page... 5/5
+2026-07-10 09:36:42,488 - INFO - Collected 3 post links from subreddit.
+2026-07-10 09:36:42,502 - INFO - Scraping post 1/3: https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread
+2026-07-10 09:36:42,503 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread
+2026-07-10 09:36:47,284 - INFO - Scrolling page... 1/10
+2026-07-10 09:36:48,808 - INFO - Scrolling page... 2/10
+2026-07-10 09:36:50,342 - INFO - Scrolling page... 3/10
+2026-07-10 09:36:51,873 - INFO - Scrolling page... 4/10
+2026-07-10 09:36:53,407 - INFO - Scrolling page... 5/10
+2026-07-10 09:36:54,942 - INFO - Scrolling page... 6/10
+2026-07-10 09:36:56,477 - INFO - Scrolling page... 7/10
+2026-07-10 09:36:58,013 - INFO - Scrolling page... 8/10
+2026-07-10 09:36:59,540 - INFO - Scrolling page... 9/10
+2026-07-10 09:37:01,075 - INFO - Scrolling page... 10/10
+2026-07-10 09:37:02,952 - INFO - Clicked expansion button: button:has-text('More replies')
+2026-07-10 09:37:06,140 - INFO - Total comment expansion clicks: 1
+2026-07-10 09:37:15,947 - INFO - Scraping post 2/3: https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired
+2026-07-10 09:37:15,948 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired
+2026-07-10 09:37:20,427 - INFO - Scrolling page... 1/10
+2026-07-10 09:37:21,941 - INFO - Scrolling page... 2/10
+2026-07-10 09:37:23,475 - INFO - Scrolling page... 3/10
+2026-07-10 09:37:25,015 - INFO - Scrolling page... 4/10
+2026-07-10 09:37:26,546 - INFO - Scrolling page... 5/10
+2026-07-10 09:37:28,075 - INFO - Scrolling page... 6/10
+2026-07-10 09:37:29,614 - INFO - Scrolling page... 7/10
+2026-07-10 09:37:31,142 - INFO - Scrolling page... 8/10
+2026-07-10 09:37:32,678 - INFO - Scrolling page... 9/10
+2026-07-10 09:37:34,208 - INFO - Scrolling page... 10/10
+2026-07-10 09:37:35,796 - INFO - Total comment expansion clicks: 0
+2026-07-10 09:37:42,468 - INFO - Scraping post 3/3: https://www.reddit.com/r/MachineLearning/comments/1ug7vxs/live_continual_learning_in_machine_learning_d
+2026-07-10 09:37:42,468 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1ug7vxs/live_continual_learning_in_machine_learning_d
+2026-07-10 09:37:47,346 - INFO - Scrolling page... 1/10
+2026-07-10 09:37:48,877 - INFO - Scrolling page... 2/10
+2026-07-10 09:37:50,412 - INFO - Scrolling page... 3/10
+2026-07-10 09:37:51,944 - INFO - Scrolling page... 4/10
+2026-07-10 09:37:53,476 - INFO - Scrolling page... 5/10
+2026-07-10 09:37:55,010 - INFO - Scrolling page... 6/10
+2026-07-10 09:37:56,545 - INFO - Scrolling page... 7/10
+2026-07-10 09:37:58,078 - INFO - Scrolling page... 8/10
+2026-07-10 09:37:59,613 - INFO - Scrolling page... 9/10
+2026-07-10 09:38:01,146 - INFO - Scrolling page... 10/10
+2026-07-10 09:38:02,935 - INFO - Clicked expansion button: button:has-text('More replies')
+2026-07-10 09:38:06,020 - INFO - Total comment expansion clicks: 1
+2026-07-10 09:38:12,463 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.json
+2026-07-10 09:38:12,473 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.csv
+2026-07-10 09:38:13,274 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-10 09:44:36,485 - INFO - === Reddit Scraper V2 Started ===
+2026-07-10 09:44:38,393 - INFO - Opening subreddit: https://www.reddit.com/r/MachineLearning/
+2026-07-10 09:44:42,899 - INFO - Scrolling page... 1/5
+2026-07-10 09:44:44,686 - INFO - Scrolling page... 2/5
+2026-07-10 09:44:46,236 - INFO - Scrolling page... 3/5
+2026-07-10 09:44:48,287 - INFO - Scrolling page... 4/5
+2026-07-10 09:44:49,803 - INFO - Scrolling page... 5/5
+2026-07-10 09:44:53,583 - INFO - Collected 3 post links from subreddit.
+2026-07-10 09:44:53,596 - INFO - Scraping post 1/3: https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread
+2026-07-10 09:44:53,596 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread
+2026-07-10 09:44:58,472 - INFO - Scrolling page... 1/10
+2026-07-10 09:44:59,985 - INFO - Scrolling page... 2/10
+2026-07-10 09:45:01,552 - INFO - Scrolling page... 3/10
+2026-07-10 09:45:03,090 - INFO - Scrolling page... 4/10
+2026-07-10 09:45:04,622 - INFO - Scrolling page... 5/10
+2026-07-10 09:45:06,153 - INFO - Scrolling page... 6/10
+2026-07-10 09:45:07,686 - INFO - Scrolling page... 7/10
+2026-07-10 09:45:09,221 - INFO - Scrolling page... 8/10
+2026-07-10 09:45:10,762 - INFO - Scrolling page... 9/10
+2026-07-10 09:45:12,287 - INFO - Scrolling page... 10/10
+2026-07-10 09:45:14,197 - INFO - Clicked expansion element: button:has-text('More replies')
+2026-07-10 09:45:17,357 - INFO - Total comment expansion clicks: 1
+2026-07-10 09:45:17,358 - INFO - Scrolling page... 1/3
+2026-07-10 09:45:18,393 - INFO - Scrolling page... 2/3
+2026-07-10 09:45:19,426 - INFO - Scrolling page... 3/3
+2026-07-10 09:45:41,514 - INFO - Scraping post 2/3: https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired
+2026-07-10 09:45:41,514 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired
+2026-07-12 13:11:29,887 - ERROR - Scraper failed: Page.goto: Timeout 90000ms exceeded.
+Call log:
+  - navigating to "https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired", waiting until "domcontentloaded"
+Traceback (most recent call last):
+  File "C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\main.py", line 71, in main
+    crawler.open_post_and_expand_comments(post_url)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\crawler.py", line 134, in open_post_and_expand_comments
+    self.page.goto(post_url, wait_until="domcontentloaded")
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\sync_api\_generated.py", line 9770, in goto
+    self._sync(
+    ~~~~~~~~~~^
+        self._impl_obj.goto(
+        ^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        )
+        ^
+    )
+    ^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_connection.py", line 563, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Page.goto: Timeout 90000ms exceeded.
+Call log:
+  - navigating to "https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired", waiting until "domcontentloaded"
+
+2026-07-12 13:11:48,214 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-12 21:53:54,928 - INFO - === Reddit Scraper V2 Started ===
+2026-07-12 21:53:57,398 - INFO - Opening subreddit: https://www.reddit.com/r/MachineLearning/
+2026-07-12 21:54:01,594 - INFO - Scrolling page... 1/5
+2026-07-12 21:54:03,111 - INFO - Scrolling page... 2/5
+2026-07-12 21:54:04,630 - INFO - Scrolling page... 3/5
+2026-07-12 21:54:06,146 - INFO - Scrolling page... 4/5
+2026-07-12 21:54:07,680 - INFO - Scrolling page... 5/5
+2026-07-12 21:54:11,753 - INFO - Collected 5 post links from subreddit.
+2026-07-12 21:54:11,764 - INFO - Scraping post 1/5: https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread
+2026-07-12 21:54:11,764 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread
+2026-07-12 21:54:31,478 - INFO - Scrolling page... 1/10
+2026-07-12 21:54:32,996 - INFO - Scrolling page... 2/10
+2026-07-12 21:54:34,512 - INFO - Scrolling page... 3/10
+2026-07-12 21:54:36,029 - INFO - Scrolling page... 4/10
+2026-07-12 21:54:37,547 - INFO - Scrolling page... 5/10
+2026-07-12 21:54:39,063 - INFO - Scrolling page... 6/10
+2026-07-12 21:54:40,581 - INFO - Scrolling page... 7/10
+2026-07-12 21:54:42,097 - INFO - Scrolling page... 8/10
+2026-07-12 21:54:43,613 - INFO - Scrolling page... 9/10
+2026-07-12 21:54:45,120 - INFO - Scrolling page... 10/10
+2026-07-12 21:54:46,895 - INFO - Clicked expansion element: button:has-text('More replies')
+2026-07-12 21:54:50,063 - INFO - Total comment expansion clicks: 1
+2026-07-12 21:54:50,063 - INFO - Scrolling page... 1/3
+2026-07-12 21:54:51,088 - INFO - Scrolling page... 2/3
+2026-07-12 21:54:52,101 - INFO - Scrolling page... 3/3
+2026-07-12 21:55:05,891 - INFO - Scraping post 2/5: https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired
+2026-07-12 21:55:05,891 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired
+2026-07-12 21:55:11,171 - INFO - Scrolling page... 1/10
+2026-07-12 21:55:12,680 - INFO - Scrolling page... 2/10
+2026-07-12 21:55:14,200 - INFO - Scrolling page... 3/10
+2026-07-12 21:55:15,715 - INFO - Scrolling page... 4/10
+2026-07-12 21:55:17,230 - INFO - Scrolling page... 5/10
+2026-07-12 21:55:18,747 - INFO - Scrolling page... 6/10
+2026-07-12 21:55:20,264 - INFO - Scrolling page... 7/10
+2026-07-12 21:55:21,801 - INFO - Scrolling page... 8/10
+2026-07-12 21:55:23,323 - INFO - Scrolling page... 9/10
+2026-07-12 21:55:24,830 - INFO - Scrolling page... 10/10
+2026-07-12 21:55:26,388 - INFO - Total comment expansion clicks: 0
+2026-07-12 21:55:26,388 - INFO - Scrolling page... 1/3
+2026-07-12 21:55:27,397 - INFO - Scrolling page... 2/3
+2026-07-12 21:55:28,415 - INFO - Scrolling page... 3/3
+2026-07-12 21:55:37,172 - INFO - Scraping post 3/5: https://www.reddit.com/r/MachineLearning/comments/1ukgwk1/a_systemlevel_approach_to_prompt_injection
+2026-07-12 21:55:37,173 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1ukgwk1/a_systemlevel_approach_to_prompt_injection
+2026-07-12 21:55:42,267 - INFO - Scrolling page... 1/10
+2026-07-12 21:55:43,811 - INFO - Scrolling page... 2/10
+2026-07-12 21:55:45,319 - INFO - Scrolling page... 3/10
+2026-07-12 21:55:46,836 - INFO - Scrolling page... 4/10
+2026-07-12 21:55:48,353 - INFO - Scrolling page... 5/10
+2026-07-12 21:55:49,897 - INFO - Scrolling page... 6/10
+2026-07-12 21:55:51,420 - INFO - Scrolling page... 7/10
+2026-07-12 21:55:52,934 - INFO - Scrolling page... 8/10
+2026-07-12 21:55:54,452 - INFO - Scrolling page... 9/10
+2026-07-12 21:55:55,971 - INFO - Scrolling page... 10/10
+2026-07-12 21:55:57,532 - INFO - Total comment expansion clicks: 0
+2026-07-12 21:55:57,534 - INFO - Scrolling page... 1/3
+2026-07-12 21:55:58,555 - INFO - Scrolling page... 2/3
+2026-07-12 21:55:59,567 - INFO - Scrolling page... 3/3
+2026-07-12 21:56:12,274 - INFO - Scraping post 4/5: https://www.reddit.com/r/MachineLearning/comments/1ukjtlm/on_july_1_2026_arxiv_will_spin_out_from_cornell
+2026-07-12 21:56:12,274 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1ukjtlm/on_july_1_2026_arxiv_will_spin_out_from_cornell
+2026-07-12 21:56:17,883 - INFO - Scrolling page... 1/10
+2026-07-12 21:56:19,416 - INFO - Scrolling page... 2/10
+2026-07-12 21:56:20,935 - INFO - Scrolling page... 3/10
+2026-07-12 21:56:22,454 - INFO - Scrolling page... 4/10
+2026-07-12 21:56:23,969 - INFO - Scrolling page... 5/10
+2026-07-12 21:56:25,488 - INFO - Scrolling page... 6/10
+2026-07-12 21:56:27,001 - INFO - Scrolling page... 7/10
+2026-07-12 21:56:28,519 - INFO - Scrolling page... 8/10
+2026-07-12 21:56:30,035 - INFO - Scrolling page... 9/10
+2026-07-12 21:56:31,557 - INFO - Scrolling page... 10/10
+2026-07-12 21:56:33,425 - INFO - Total comment expansion clicks: 0
+2026-07-12 21:56:33,428 - INFO - Scrolling page... 1/3
+2026-07-12 21:56:34,435 - INFO - Scrolling page... 2/3
+2026-07-12 21:56:35,453 - INFO - Scrolling page... 3/3
+2026-07-12 21:56:51,321 - INFO - Scraping post 5/5: https://www.reddit.com/r/MachineLearning/comments/1usq43t/why_doesnt_the_ml_research_community_limit_the
+2026-07-12 21:56:51,321 - INFO - Opening post: https://www.reddit.com/r/MachineLearning/comments/1usq43t/why_doesnt_the_ml_research_community_limit_the
+2026-07-12 21:56:56,269 - INFO - Scrolling page... 1/10
+2026-07-12 21:56:57,831 - INFO - Scrolling page... 2/10
+2026-07-12 21:56:59,356 - INFO - Scrolling page... 3/10
+2026-07-12 21:57:00,872 - INFO - Scrolling page... 4/10
+2026-07-12 21:57:02,387 - INFO - Scrolling page... 5/10
+2026-07-12 21:57:03,901 - INFO - Scrolling page... 6/10
+2026-07-12 21:57:05,446 - INFO - Scrolling page... 7/10
+2026-07-12 21:57:06,967 - INFO - Scrolling page... 8/10
+2026-07-12 21:57:08,486 - INFO - Scrolling page... 9/10
+2026-07-12 21:57:10,000 - INFO - Scrolling page... 10/10
+2026-07-12 21:57:11,684 - INFO - Clicked expansion element: button:has-text('More replies')
+2026-07-12 21:57:14,770 - INFO - Total comment expansion clicks: 1
+2026-07-12 21:57:14,770 - INFO - Scrolling page... 1/3
+2026-07-12 21:57:15,791 - INFO - Scrolling page... 2/3
+2026-07-12 21:57:16,809 - INFO - Scrolling page... 3/3
+2026-07-12 21:57:32,906 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.json
+2026-07-12 21:57:32,933 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.csv
+2026-07-12 21:57:33,698 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-12 22:04:10,694 - INFO - === Reddit Scraper V2 Started ===
+2026-07-12 22:04:13,901 - INFO - Opening subreddit: https://www.reddit.com/r/artificial/comments/1un6v9c/this_week_in_ai_gpt56_gemini_35_flash_claude/
+2026-07-12 22:04:18,487 - INFO - Scrolling page... 1/5
+2026-07-12 22:04:20,149 - INFO - Scrolling page... 2/5
+2026-07-12 22:04:21,660 - INFO - Scrolling page... 3/5
+2026-07-12 22:04:23,166 - INFO - Scrolling page... 4/5
+2026-07-12 22:04:24,681 - INFO - Scrolling page... 5/5
+2026-07-12 22:04:29,194 - INFO - Collected 5 post links from subreddit.
+2026-07-12 22:04:29,201 - INFO - Scraping post 1/5: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 22:04:29,201 - INFO - Opening post: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 22:04:37,660 - INFO - Scrolling page... 1/10
+2026-07-12 22:04:40,281 - INFO - Scrolling page... 2/10
+2026-07-12 22:04:45,375 - INFO - Scrolling page... 3/10
+2026-07-12 22:04:48,337 - INFO - Scrolling page... 4/10
+2026-07-12 22:04:51,333 - INFO - Scrolling page... 5/10
+2026-07-12 22:04:55,347 - INFO - Scrolling page... 6/10
+2026-07-12 22:04:57,518 - INFO - Scrolling page... 7/10
+2026-07-12 22:04:59,385 - INFO - Scrolling page... 8/10
+2026-07-12 22:05:01,403 - INFO - Scrolling page... 9/10
+2026-07-12 22:05:03,415 - INFO - Scrolling page... 10/10
+2026-07-12 22:05:05,593 - INFO - Total comment expansion clicks: 0
+2026-07-12 22:05:05,594 - INFO - Scrolling page... 1/3
+2026-07-12 22:05:06,950 - INFO - Scrolling page... 2/3
+2026-07-12 22:05:09,030 - INFO - Scrolling page... 3/3
+2026-07-12 22:05:46,632 - INFO - Scraping post 2/5: https://www.reddit.com/r/edmproduction/comments/1rsie94/gemini_ai_as_a_learning_tool
+2026-07-12 22:05:46,632 - INFO - Opening post: https://www.reddit.com/r/edmproduction/comments/1rsie94/gemini_ai_as_a_learning_tool
+2026-07-12 22:05:54,872 - INFO - Scrolling page... 1/10
+2026-07-12 22:06:00,234 - INFO - Scrolling page... 2/10
+2026-07-12 22:06:04,243 - INFO - Scrolling page... 3/10
+2026-07-12 22:06:06,345 - INFO - Scrolling page... 4/10
+2026-07-12 22:06:08,451 - INFO - Scrolling page... 5/10
+2026-07-12 22:06:10,310 - INFO - Scrolling page... 6/10
+2026-07-12 22:06:12,356 - INFO - Scrolling page... 7/10
+2026-07-12 22:06:14,419 - INFO - Scrolling page... 8/10
+2026-07-12 22:06:16,334 - INFO - Scrolling page... 9/10
+2026-07-12 22:06:18,394 - INFO - Scrolling page... 10/10
+2026-07-12 22:06:27,396 - INFO - Clicked expansion element: faceplate-partial[loading='action']
+2026-07-12 22:06:28,425 - INFO - Total comment expansion clicks: 1
+2026-07-12 22:06:28,440 - INFO - Scrolling page... 1/3
+2026-07-12 22:06:29,468 - INFO - Scrolling page... 2/3
+2026-07-12 22:06:30,486 - INFO - Scrolling page... 3/3
+2026-07-12 22:06:37,904 - INFO - Scraping post 3/5: https://www.reddit.com/r/accelerate/comments/1sswv06/another_thursday_another_win_for_ai_gpt55_is
+2026-07-12 22:06:37,905 - INFO - Opening post: https://www.reddit.com/r/accelerate/comments/1sswv06/another_thursday_another_win_for_ai_gpt55_is
+2026-07-12 22:06:44,400 - INFO - Scrolling page... 1/10
+2026-07-12 22:06:45,919 - INFO - Scrolling page... 2/10
+2026-07-12 22:06:47,456 - INFO - Scrolling page... 3/10
+2026-07-12 22:06:48,971 - INFO - Scrolling page... 4/10
+2026-07-12 22:06:50,483 - INFO - Scrolling page... 5/10
+2026-07-12 22:06:52,001 - INFO - Scrolling page... 6/10
+2026-07-12 22:06:53,537 - INFO - Scrolling page... 7/10
+2026-07-12 22:06:55,059 - INFO - Scrolling page... 8/10
+2026-07-12 22:06:56,567 - INFO - Scrolling page... 9/10
+2026-07-12 22:06:58,085 - INFO - Scrolling page... 10/10
+2026-07-12 22:06:59,708 - INFO - Clicked expansion element: button:has-text('More replies')
+2026-07-12 22:07:00,735 - INFO - Total comment expansion clicks: 1
+2026-07-12 22:07:00,736 - INFO - Scrolling page... 1/3
+2026-07-12 22:07:00,737 - ERROR - Scraper failed: Mouse.wheel: Target page, context or browser has been closed
+Traceback (most recent call last):
+  File "c:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\main.py", line 101, in main
+    crawler.open_post_and_expand_comments(post_url)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "c:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\crawler.py", line 145, in open_post_and_expand_comments
+    self._scroll_page(3, 1)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "c:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\crawler.py", line 76, in _scroll_page
+    self.page.mouse.wheel(0, 6000)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\sync_api\_generated.py", line 1783, in wheel
+    self._sync(self._impl_obj.wheel(deltaX=delta_x, deltaY=delta_y))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_sync_base.py", line 115, in _sync
+    return task.result()
+           ~~~~~~~~~~~^^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_input.py", line 101, in wheel
+    await self._channel.send("mouseWheel", None, locals_to_params(locals()))
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\Mitanshu Rana\AppData\Local\Programs\Python\Python314\Lib\site-packages\playwright\_impl\_connection.py", line 563, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TargetClosedError: Mouse.wheel: Target page, context or browser has been closed
+2026-07-12 22:07:10,480 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-12 22:10:12,087 - INFO - === Reddit Scraper V2 Started ===
+2026-07-12 22:10:13,951 - INFO - Opening subreddit: https://www.reddit.com/r/artificial/comments/1un6v9c/this_week_in_ai_gpt56_gemini_35_flash_claude/
+2026-07-12 22:10:18,956 - INFO - Scrolling page... 1/5
+2026-07-12 22:10:20,459 - INFO - Scrolling page... 2/5
+2026-07-12 22:10:22,012 - INFO - Scrolling page... 3/5
+2026-07-12 22:10:23,517 - INFO - Scrolling page... 4/5
+2026-07-12 22:10:25,035 - INFO - Scrolling page... 5/5
+2026-07-12 22:10:28,638 - INFO - Collected 1 post links from subreddit.
+2026-07-12 22:10:28,644 - INFO - Scraping post 1/1: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 22:10:28,646 - INFO - Opening post: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 22:10:43,243 - INFO - Scrolling page... 1/10
+2026-07-12 22:10:46,684 - INFO - Scrolling page... 2/10
+2026-07-12 22:10:50,570 - INFO - Scrolling page... 3/10
+2026-07-12 22:10:52,794 - INFO - Scrolling page... 4/10
+2026-07-12 22:10:54,716 - INFO - Scrolling page... 5/10
+2026-07-12 22:10:56,731 - INFO - Scrolling page... 6/10
+2026-07-12 22:10:58,748 - INFO - Scrolling page... 7/10
+2026-07-12 22:11:00,765 - INFO - Scrolling page... 8/10
+2026-07-12 22:11:03,808 - INFO - Scrolling page... 9/10
+2026-07-12 22:11:05,780 - INFO - Scrolling page... 10/10
+2026-07-12 22:11:07,982 - INFO - Total comment expansion clicks: 0
+2026-07-12 22:11:07,983 - INFO - Scrolling page... 1/3
+2026-07-12 22:11:09,463 - INFO - Scrolling page... 2/3
+2026-07-12 22:11:11,349 - INFO - Scrolling page... 3/3
+2026-07-12 22:12:14,337 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.json
+2026-07-12 22:12:14,347 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.csv
+2026-07-12 22:12:15,567 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-12 22:57:43,701 - INFO - === Reddit Scraper V2 Started ===
+2026-07-12 22:57:46,118 - INFO - Opening https://www.reddit.com/r/artificial/comments/1un6v9c/this_week_in_ai_gpt56_gemini_35_flash_claude/
+2026-07-12 22:57:59,380 - INFO - Scraping post 1/1: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 22:58:26,568 - ERROR - Scraper failed: 'RedditCrawler' object has no attribute 'extract_post_meta_from_dom'
+Traceback (most recent call last):
+  File "c:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\main.py", line 113, in main
+    meta = crawler.extract_post_meta_from_dom(post_url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RedditCrawler' object has no attribute 'extract_post_meta_from_dom'
+2026-07-12 22:58:27,677 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-12 22:58:58,332 - INFO - === Reddit Scraper V2 Started ===
+2026-07-12 22:59:00,650 - INFO - Opening https://www.reddit.com/r/artificial/comments/1un6v9c/this_week_in_ai_gpt56_gemini_35_flash_claude/
+2026-07-12 22:59:13,364 - INFO - Scraping post 1/1: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 22:59:40,784 - ERROR - Scraper failed: 'RedditCrawler' object has no attribute 'extract_post_meta_from_dom'
+Traceback (most recent call last):
+  File "c:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\main.py", line 113, in main
+    meta = crawler.extract_post_meta_from_dom(post_url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RedditCrawler' object has no attribute 'extract_post_meta_from_dom'
+2026-07-12 22:59:41,734 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-12 23:33:45,776 - INFO - === Reddit Scraper V2 Started ===
+2026-07-12 23:33:47,861 - INFO - Opening subreddit: https://www.reddit.com/r/artificial/comments/1un6v9c/this_week_in_ai_gpt56_gemini_35_flash_claude/
+2026-07-12 23:33:52,188 - INFO - Scrolling page... 1/5
+2026-07-12 23:33:53,707 - INFO - Scrolling page... 2/5
+2026-07-12 23:33:55,223 - INFO - Scrolling page... 3/5
+2026-07-12 23:33:56,741 - INFO - Scrolling page... 4/5
+2026-07-12 23:33:58,276 - INFO - Scrolling page... 5/5
+2026-07-12 23:34:01,948 - INFO - Collected 1 post links from subreddit.
+2026-07-12 23:34:01,957 - INFO - Scraping post 1/1: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 23:34:01,958 - INFO - Opening post: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 23:34:06,232 - INFO - Scrolling page... 1/10
+2026-07-12 23:34:07,758 - INFO - Scrolling page... 2/10
+2026-07-12 23:34:09,291 - INFO - Scrolling page... 3/10
+2026-07-12 23:34:10,830 - INFO - Scrolling page... 4/10
+2026-07-12 23:34:12,359 - INFO - Scrolling page... 5/10
+2026-07-12 23:34:13,895 - INFO - Scrolling page... 6/10
+2026-07-12 23:34:15,430 - INFO - Scrolling page... 7/10
+2026-07-12 23:34:16,959 - INFO - Scrolling page... 8/10
+2026-07-12 23:34:18,494 - INFO - Scrolling page... 9/10
+2026-07-12 23:34:20,026 - INFO - Scrolling page... 10/10
+2026-07-12 23:34:21,656 - INFO - Total comment expansion clicks: 0
+2026-07-12 23:34:21,657 - INFO - Scrolling page... 1/3
+2026-07-12 23:34:22,693 - INFO - Scrolling page... 2/3
+2026-07-12 23:34:23,724 - INFO - Scrolling page... 3/3
+2026-07-12 23:34:29,106 - INFO - Extracted 0 comments.
+2026-07-12 23:34:29,113 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.json
+2026-07-12 23:34:29,127 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.csv
+2026-07-12 23:34:29,783 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-12 23:49:21,440 - INFO - === Reddit Scraper V2 Started ===
+2026-07-12 23:49:23,734 - INFO - Opening subreddit: https://www.reddit.com/r/artificial/comments/1un6v9c/this_week_in_ai_gpt56_gemini_35_flash_claude/
+2026-07-12 23:49:28,178 - INFO - Scrolling page... 1/5
+2026-07-12 23:49:29,704 - INFO - Scrolling page... 2/5
+2026-07-12 23:49:31,219 - INFO - Scrolling page... 3/5
+2026-07-12 23:49:32,754 - INFO - Scrolling page... 4/5
+2026-07-12 23:49:34,289 - INFO - Scrolling page... 5/5
+2026-07-12 23:49:37,968 - INFO - Collected 1 post links from subreddit.
+2026-07-12 23:49:37,979 - INFO - Scraping post 1/1: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 23:49:37,980 - INFO - Opening post: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-12 23:49:42,310 - INFO - Comment elements detected in DOM.
+2026-07-12 23:49:42,311 - INFO - Scrolling page... 1/10
+2026-07-12 23:49:43,865 - INFO - Scrolling page... 2/10
+2026-07-12 23:49:45,390 - INFO - Scrolling page... 3/10
+2026-07-12 23:49:46,928 - INFO - Scrolling page... 4/10
+2026-07-12 23:49:48,457 - INFO - Scrolling page... 5/10
+2026-07-12 23:49:49,999 - INFO - Scrolling page... 6/10
+2026-07-12 23:49:51,527 - INFO - Scrolling page... 7/10
+2026-07-12 23:49:53,060 - INFO - Scrolling page... 8/10
+2026-07-12 23:49:54,588 - INFO - Scrolling page... 9/10
+2026-07-12 23:49:56,126 - INFO - Scrolling page... 10/10
+2026-07-12 23:49:57,852 - INFO - Total comment expansion clicks: 0
+2026-07-12 23:49:57,852 - INFO - Scrolling page... 1/3
+2026-07-12 23:49:58,889 - INFO - Scrolling page... 2/3
+2026-07-12 23:49:59,931 - INFO - Scrolling page... 3/3
+2026-07-12 23:50:03,114 - INFO - Saved debug HTML to data/last_post_debug.html
+2026-07-12 23:50:05,370 - INFO - Selector 'shreddit-comment' matched 15 node(s).
+2026-07-12 23:50:07,013 - INFO - Selector 'faceplate-comment' matched 0 node(s).
+2026-07-12 23:50:07,026 - INFO - Selector '[data-testid='comment']' matched 0 node(s).
+2026-07-12 23:50:07,040 - INFO - Selector 'div[id^='t1_']' matched 30 node(s).
+2026-07-12 23:50:10,233 - INFO - Selector 'div[thingid^='t1_']' matched 0 node(s).
+2026-07-12 23:50:10,233 - WARNING - No comments matched any known selector. Check data/last_post_debug.html to see the actual page markup and update the selectors in extract_comments_from_dom().
+2026-07-12 23:50:10,233 - INFO - Extracted 0 comments.
+2026-07-12 23:50:10,239 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.json
+2026-07-12 23:50:10,251 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.csv
+2026-07-12 23:50:11,038 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-13 00:02:50,793 - INFO - === Reddit Scraper V2 Started ===
+2026-07-13 00:02:53,069 - INFO - Opening subreddit: https://www.reddit.com/r/artificial/comments/1un6v9c/this_week_in_ai_gpt56_gemini_35_flash_claude/
+2026-07-13 00:02:57,464 - INFO - Scrolling page... 1/5
+2026-07-13 00:02:58,989 - INFO - Scrolling page... 2/5
+2026-07-13 00:03:00,514 - INFO - Scrolling page... 3/5
+2026-07-13 00:03:02,044 - INFO - Scrolling page... 4/5
+2026-07-13 00:03:03,608 - INFO - Scrolling page... 5/5
+2026-07-13 00:03:07,291 - INFO - Collected 1 post links from subreddit.
+2026-07-13 00:03:07,299 - INFO - Scraping post 1/1: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-13 00:03:07,300 - INFO - Opening post: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-13 00:03:11,642 - INFO - Scrolling page... 1/2
+2026-07-13 00:03:12,656 - INFO - Scrolling page... 2/2
+2026-07-13 00:03:21,357 - INFO - JSON extraction succeeded: 15 comment(s) found.
+2026-07-13 00:03:21,381 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.json
+2026-07-13 00:03:21,416 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.csv
+2026-07-13 00:03:22,228 - INFO - === Reddit Scraper V2 Finished ===
+2026-07-13 00:17:23,001 - INFO - === Reddit Scraper V2 Started ===
+2026-07-13 00:17:24,475 - INFO - Opening subreddit: https://www.reddit.com/r/artificial/comments/1un6v9c/this_week_in_ai_gpt56_gemini_35_flash_claude/
+2026-07-13 00:17:28,622 - INFO - Scrolling page... 1/5
+2026-07-13 00:17:30,138 - INFO - Scrolling page... 2/5
+2026-07-13 00:17:31,655 - INFO - Scrolling page... 3/5
+2026-07-13 00:17:33,171 - INFO - Scrolling page... 4/5
+2026-07-13 00:17:34,689 - INFO - Scrolling page... 5/5
+2026-07-13 00:17:38,359 - INFO - Collected 1 post links from subreddit.
+2026-07-13 00:17:38,363 - INFO - Scraping post 1/1: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-13 00:17:38,363 - INFO - Opening post: https://www.reddit.com/r/artificial/comments/1un6v9c/comment
+2026-07-13 00:17:42,550 - INFO - Scrolling page... 1/2
+2026-07-13 00:17:44,256 - INFO - Scrolling page... 2/2
+2026-07-13 00:17:47,868 - INFO - JSON extraction succeeded: 15 comment(s) found.
+2026-07-13 00:17:47,876 - INFO - JSON exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.json
+2026-07-13 00:17:47,887 - INFO - CSV exported to C:\Users\Mitanshu Rana\OneDrive\Desktop\reddit_scraper\data\reddit_threads.csv
+2026-07-13 00:17:48,209 - INFO - === Reddit Scraper V2 Finished ===
