@@ -3,8 +3,8 @@
     "title": "This week in AI: GPT-5.6, Gemini 3.5 Flash, Claude Science, and a Qwen price war — inference cost is collapsing across every tier at once",
     "author": "ksraj1001",
     "subreddit": "r/artificial",
-    "upvotes": "53",
-    "comments_count": "15",
+    "upvotes": "54",
+    "comments_count": "16",
     "post_url": "https://www.reddit.com/r/artificial/comments/1un6v9c/comment",
     "content": "Lot dropped this week and there's a pretty clear through-line, so figured I'd pull it together. Model releases: \\- OpenAI launched GPT-5.6 (Sol/Terra/Luna). The bit worth noting isn't the flagship — it's Terra, reportedly matching GPT-5.5 quality at \\~2x cheaper, with Luna aimed at the low-cost end. \\- Google shipped Gemini 3.5 Flash (beats 3.1 Pro on several benchmarks), plus Nano Banana 2 Lite (images \\~$0.034/1K-res) and Gemini Omni Flash (video \\~$0.10/sec via API). \\- xAI made Grok 3 GA and Grok 4.1 live for everyone. Grok 5 still hasn't shipped, which is its own story at this point. Vertical / enterprise: \\- Anthropic launched Claude Science for pharma and lab research. Separately, the US govt lifted the export restrictions on Fable 5 / Mythos 5 that it had imposed only weeks earlier. \\- Mistral shipped OCR 4 (on-prem, structure-aware extraction) and is reportedly raising \\~€3B at \\~€20B. Open source: \\- Ollama crossed 52M monthly downloads, added \\`ollama launch\\` (one command to run coding agents on local or cloud models), and is now compatible with the Anthropic Messages API. \\- Hugging Face: agents can train models via Hub skills now; Meta + HF also launched OpenEnv for agent environments. Funding: \\- Together AI raised $800M Series C (\\~$8.3B post). Crunchbase notes \\~88% of 2026 AI funding went to US companies. My take as someone building on top of these APIs: The thing I keep noticing is that the price collapse is happening across every tier simultaneously, not just at the bottom. When the \"balanced\" model gets 2x cheaper each generation and the Flash tier beats last year's Pro, it gets really hard to build a business whose only edge is \"we use the best model.\" That edge evaporates on someone else's release schedule. The stuff that looked durable this week was all workflow-and-data — Claude Science, Mistral's on-prem OCR, Alibaba's agent ecosystem. Would genuinely like to hear how others here are handling multi-provider abstraction, because a surprise price or availability change shouldn't be able to wreck your margins overnight. And the frozen-then-unfrozen Anthropic thing means model availability is now a supply-chain risk, not a hypothetical.",
     "scraped_from": "https://www.reddit.com/r/artificial/comments/1un6v9c/comment",
@@ -12,7 +12,7 @@
       {
         "author": "KnodulesAintHeavy",
         "body": "Price drops? According to who exactly? The labs. They sure do have a motivation to say their honest cost at the moment when everyone is seeing the actual numbers from the likes of OAI and how they don’t line up, at all…. /s obviously Thanks but I’ll believe numbers when they are forced to release real values when Anthropic and or OAI approach public listing. These “price drops” are more than likely them further subsiding their already incredibly undervalued inference costs to assuage punters and more importantly investors.",
-        "score": "14",
+        "score": "12",
         "depth": 0,
         "replies": []
       },
@@ -115,6 +115,13 @@
       {
         "author": "noninertialframe96",
         "body": "Is the cheaper same-gen model beating the previous flagship mostly from distillation off the bigger sibling?",
+        "score": "1",
+        "depth": 0,
+        "replies": []
+      },
+      {
+        "author": "FDRyze",
+        "body": "Model names matter less than the fact that pricing is dropping everywhere at once. We build in this space and the pattern we keep seeing is that whoever's cheapest today won't be in 3 months. So if your stack is hardwired to one vendor, you're just not capturing any of these drops. The teams swapping models with a config change are the ones actually benefiting. Everyone else is renegotiating contracts or rewriting integrations. Slightly contrarian take though: token cost was never the big expense for most orgs. We see way more money burned on the stuff around the model. Vague requirements, rework, endless review loops. Cheaper inference doesn't fix any of that. The one genuinely big shift imo is that self-hosting open weights just became realistic for a lot more teams. If you're in a regulated space and data can't leave your network, that's the actual headline here.",
         "score": "1",
         "depth": 0,
         "replies": []
