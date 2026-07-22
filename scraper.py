@@ -20,6 +20,7 @@ from __future__ import annotations
 from dotenv import load_dotenv
 load_dotenv()
 
+import html as _html
 import json
 import os
 import re
@@ -445,6 +446,13 @@ class FirecrawlResearcher:
             context_terms=context_terms,
         )
 
+        # Strip Firecrawl's <Base64-Image-Removed> placeholders — these are
+        # XenForo emoticons whose actual base64 data was stripped; they produce
+        # broken ![alt](<Base64-Image-Removed>) refs that Streamlit can't render.
+        content = re.sub(
+            r'!\[[^\]]*\]\(<Base64-Image-Removed>\)', '', content,
+        )
+
         # Safety net: some pages embed images (lazy-loaded, CSS background,
         # <picture> tags) that Firecrawl's markdown conversion drops even
         # though they're present in the raw HTML. Sweep the HTML too and
@@ -840,6 +848,8 @@ def _block_images(block: str, context_terms: Optional[List[str]] = None) -> List
     imgs = []
     for m in MD_IMG_RE.finditer(block):
         alt, url = m.group(1), m.group(2)
+        if '<Base64-Image-Removed>' in url:
+            continue
         imgs.append(ScrapedImage(url=url, alt=alt, relevance_score=_score_image(url, alt, context_terms)))
     return imgs
 
@@ -1014,22 +1024,22 @@ def extract_images(html: str, markdown: str = "", context_terms: Optional[List[s
 
     for m in IMG_TAG_RE.finditer(html or ""):
         src = m.group(0)
-        url = m.group(1)
+        url = _html.unescape(m.group(1))
         # Resolve relative / protocol-relative URLs against the page
         if base_url and not url.startswith(("http://", "https://", "data:")):
             url = urljoin(base_url, url)
-        # Skip data: URIs — inline base64 spacers/tracking pixels
-        if url.startswith("data:"):
+        # Skip data: URIs and Firecrawl's base64-stripped placeholders
+        if url.startswith("data:") or '<Base64-Image-Removed>' in url:
             continue
         alt_match = ALT_RE.search(src)
-        alt = alt_match.group(1) if alt_match else ""
+        alt = _html.unescape(alt_match.group(1)) if alt_match else ""
         found[url] = ScrapedImage(url=url, alt=alt, relevance_score=_score_image(url, alt, context_terms))
 
     for m in MD_IMG_RE.finditer(markdown or ""):
-        alt, url = m.group(1), m.group(2)
+        alt, url = _html.unescape(m.group(1)), _html.unescape(m.group(2))
         if base_url and not url.startswith(("http://", "https://", "data:")):
             url = urljoin(base_url, url)
-        if url.startswith("data:"):
+        if url.startswith("data:") or '<Base64-Image-Removed>' in url:
             continue
         if url not in found:
             found[url] = ScrapedImage(url=url, alt=alt, relevance_score=_score_image(url, alt, context_terms))
