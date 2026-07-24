@@ -9,6 +9,9 @@ import os
 import sys
 import re
 
+from dotenv import load_dotenv
+load_dotenv()
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scraper import FirecrawlResearcher
 

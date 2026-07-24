@@ -208,6 +208,7 @@ class ResearchCorpus:
     generated_at: float = field(default_factory=time.time)
     summary: Optional[str] = None
     summary_error: Optional[str] = None
+    search_errors: List[str] = field(default_factory=list)
 
     def to_dict(self):
         return {
@@ -216,6 +217,7 @@ class ResearchCorpus:
             "generated_at": self.generated_at,
             "summary": self.summary,
             "summary_error": self.summary_error,
+            "search_errors": self.search_errors,
             "sources": [s.to_dict() for s in self.sources],
         }
 
@@ -453,6 +455,10 @@ class FirecrawlResearcher:
             r'!\[[^\]]*\]\(<Base64-Image-Removed>\)', '', content,
         )
 
+        # Repair LaTeX math that Firecrawl mangled during PDF scraping
+        # (double-escaped backslashes, escaped underscores inside $...$ blocks).
+        content = _fix_latex_math(content)
+
         # Safety net: some pages embed images (lazy-loaded, CSS background,
         # <picture> tags) that Firecrawl's markdown conversion drops even
         # though they're present in the raw HTML. Sweep the HTML too and
@@ -646,6 +652,7 @@ class FirecrawlResearcher:
         context_terms = _extract_context_terms(prompt)
 
         candidates: List[Dict] = []
+        search_errors: List[str] = []
         for i, q in enumerate(queries):
             if progress_cb:
                 progress_cb("searching", i + 1, len(queries))
@@ -654,6 +661,8 @@ class FirecrawlResearcher:
                 if r.get("url"):
                     r["query"] = q
                     candidates.append(r)
+                elif r.get("error"):
+                    search_errors.append(f"Search '{q}': {r['error']}")
 
         # Hard-exclude e-commerce / shopping domains before ranking.
         before = len(candidates)
@@ -682,7 +691,8 @@ class FirecrawlResearcher:
                 src.title = c.get("title", src.url)
             sources.append(src)
 
-        corpus = ResearchCorpus(prompt=prompt, queries=queries, sources=sources)
+        corpus = ResearchCorpus(prompt=prompt, queries=queries, sources=sources,
+                               search_errors=search_errors)
 
         if grok_api_key:
             if progress_cb:
@@ -1067,6 +1077,55 @@ def _score_image(url: str, alt: str, context_terms: Optional[List[str]] = None) 
     if url.lower().endswith((".svg",)) and "schematic" not in text:
         score -= 1
     return score
+
+
+# -- LaTeX repair ---------------------------------------------------------
+# Firecrawl's PDF-to-markdown conversion double-escapes backslashes inside
+# LaTeX math blocks, turning  $\Omega$  into  $\\Omega$  which Streamlit's
+# MathJax renders as literal "backslash Omega" text.  It also sometimes
+# escapes underscores (\\_ instead of \_), breaking subscripts.
+#
+# This pass finds $...$ and $$...$$ blocks and un-escapes them so MathJax
+# can render the math properly.
+
+_LATEX_INLINE_RE  = re.compile(r'(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)')
+_LATEX_DISPLAY_RE = re.compile(r'\$\$(.+?)\$\$', re.DOTALL)
+
+
+def _fix_latex_math(markdown: str) -> str:
+    """
+    Repair LaTeX math fragments that Firecrawl mangled during PDF scraping.
+
+    Fixes applied inside $...$ and $$...$$ blocks:
+      - Double-escaped backslashes:  \\\\Omega -> \\Omega  -> \\Omega (rendered)
+      - Escaped underscores:         \\_       -> \\_
+      - Stray spaces around content: $ \\Omega $ -> $\\Omega$
+
+    Also repairs bare (un-delimited) LaTeX fragments like '5Omega5Omega'
+    by deduplicating and wrapping in $...$.
+    """
+    if not markdown:
+        return markdown
+
+    def _clean_math_block(m: re.Match) -> str:
+        """Un-escape a single LaTeX math block."""
+        inner = m.group(1)
+        # One level of un-escaping: \\alpha -> \alpha, \\_ -> \_
+        inner = inner.replace('\\\\', '\\')
+        inner = inner.replace('\\_', '_')
+        # Strip spurious spaces that Firecrawl inserts inside $ delimiters
+        inner = inner.strip()
+        # Re-wrap in the original delimiter style
+        full = m.group(0)
+        if full.startswith('$$'):
+            return f'$${inner}$$'
+        return f'${inner}$'
+
+    # Fix display math first ($$...$$), then inline ($...$)
+    result = _LATEX_DISPLAY_RE.sub(_clean_math_block, markdown)
+    result = _LATEX_INLINE_RE.sub(_clean_math_block, result)
+
+    return result
 
 
 def _clean_boilerplate(markdown: str) -> str:

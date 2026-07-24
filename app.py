@@ -18,11 +18,12 @@ Run with:  streamlit run app.py
 """
 
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)  # .env must win over stale shell exports
 
 import os
 import re
 import time
+import traceback
 import streamlit as st
 
 from scraper import (
@@ -167,6 +168,7 @@ if run:
         progress_bar.progress(100, text="Done")
         status.success(f"Finished in {time.time() - start:.1f}s — {len(corpus.sources)} pages scraped.")
     except Exception as e:
+        traceback.print_exc()
         st.error(f"Pipeline failed: {e}")
         st.stop()
 
@@ -185,6 +187,12 @@ if corpus:
     m1.metric("Pages scraped", len(ok_sources))
     m2.metric("Relevant images found", total_images)
     m3.metric("Failed fetches", len(failed_sources))
+
+    if getattr(corpus, "search_errors", None):
+        unique_errors = list(dict.fromkeys(corpus.search_errors))
+        with st.expander(f"⚠️ {len(corpus.search_errors)} search errors ({len(unique_errors)} unique)", expanded=not ok_sources):
+            for err in unique_errors:
+                st.caption(f"❌ {err}")
 
     tab_report, tab_export = st.tabs(["📊 Research Report", "⬇️ Export"])
 
