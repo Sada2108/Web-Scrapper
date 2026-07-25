@@ -40,10 +40,16 @@ except ImportError:
     ClickAction = WaitAction = ExecuteJavascriptAction = None
 
 try:
-    from pdf_images import extract_pdf_figures, save_figures
+    from pdf_images import extract_pdf_figures, save_figures, extract_pdf_tables
     _HAS_PDF = True
 except ImportError:
     _HAS_PDF = False
+
+try:
+    from bs4 import BeautifulSoup
+    _HAS_BS4 = True
+except ImportError:
+    _HAS_BS4 = False
 
 # --------------------------------------------------------------------------
 # Config
@@ -89,6 +95,11 @@ SCHEMA_HINT_SUFFIXES = [
 ]
 
 ALL_HINT_SUFFIXES = SOURCE_HINT_SUFFIXES + SCHEMA_HINT_SUFFIXES
+
+# When both a part number and a topic pattern match are found, this fraction
+# of queries uses the compound term (e.g. "LM386 audio amplifier"); the
+# remainder uses bare topic-pattern terms only as a breadth fallback.
+_COMPOUND_QUOTA_FRAC = 0.75
 
 # Trusted-ish EE domains we bias toward when present in results (not a hard
 # filter -- just used for ranking).
@@ -146,7 +157,20 @@ EE_KEYWORD_PATTERNS = [
 # OPA2340, MAX232, NE555 etc.  Case-insensitive so "lm386" matches as
 # well as "LM386".  When normalizing, the canonical form is UPPERCASE
 # (datasheets/search engines use uppercase part numbers).
+# Allows optional space or hyphen between prefix and digits so "LM 386"
+# matches alongside "LM386" and "LM-386".  The word-blocklist below
+# prevents common English phrases like "below 100" from being misread
+# as part numbers.
 _PART_NUMBER_RE = re.compile(r"\b([A-Z]{2,5})[\s\-]?(\d{2,5}[A-Z]?)\b", re.IGNORECASE)
+
+# Common English words that are 2-5 letters and could still precede a
+# number with no space in ordinary prose.  The blocklist is checked in
+# _extract_context_terms() so "below 100 nV" never becomes "BELOW100".
+_PART_NUMBER_WORD_BLOCKLIST = {
+    "below", "above", "over", "under", "less", "more", "than", "about",
+    "up", "to", "at", "in", "on", "of", "top", "type", "class", "grade",
+    "gain", "rev", "version", "no", "num", "page", "step", "part",
+}
 
 
 def _extract_context_terms(prompt: str) -> List[str]:
@@ -161,6 +185,9 @@ def _extract_context_terms(prompt: str) -> List[str]:
     # Part numbers (case-insensitive now; normalize to UPPERCASE so the
     # canonical form is always "LM386", never "lm386" or "Lm386").
     for m in _PART_NUMBER_RE.finditer(prompt):
+        prefix = m.group(1).lower()
+        if prefix in _PART_NUMBER_WORD_BLOCKLIST:
+            continue
         normalized = (m.group(1) + m.group(2)).upper()
         if normalized not in terms:
             terms.append(normalized)
@@ -264,10 +291,14 @@ def generate_search_queries(prompt: str, max_queries: int = 6) -> List[str]:
             unique.append(term)
     found = unique
 
-    # --- 5. Build queries: spread suffixes across the full combined list ---
-    # SOURCE_HINT_SUFFIXES and SCHEMA_HINT_SUFFIXES are merged into
-    # ALL_HINT_SUFFIXES so value-targeted queries (component values,
-    # biasing, gain equations) interleave with conceptual/generic ones.
+    # --- 5. Build queries -------------------------------------------------
+    # When both a part number and a topic pattern match exist, build a
+    # compound term (e.g. "LM386 audio amplifier") and use it for the
+    # majority of queries.  Reserve the remainder for bare pattern-match
+    # queries as a breadth fallback (a source may describe the part
+    # generically without literally saying "LM386").  Bare part-number-only
+    # queries are dropped when a compound is available — they're too
+    # ambiguous on their own.
     n_suffixes = len(ALL_HINT_SUFFIXES)
     if max_queries <= n_suffixes:
         step = n_suffixes / max_queries
@@ -277,29 +308,56 @@ def generate_search_queries(prompt: str, max_queries: int = 6) -> List[str]:
 
     queries = []
     if found:
-        total_terms = len(found)
-        # Per-term quotas: strongest term gets ceil, rest get floor.
-        quotas = []
-        for ti in range(total_terms):
-            base = max_queries // total_terms
-            extra = 1 if ti < (max_queries - base * total_terms) else 0
-            quotas.append(base + extra)
-        term_counts = [0] * total_terms
-        si = 0  # index into suffix_indices
-        while len(queries) < max_queries:
-            added = False
-            for ti in range(total_terms):
-                if term_counts[ti] < quotas[ti] and si < len(suffix_indices):
-                    term = found[ti]
-                    suffix = ALL_HINT_SUFFIXES[suffix_indices[si]]
-                    queries.append(f"{term} {suffix}")
-                    si += 1
-                    term_counts[ti] += 1
-                    added = True
-                    if len(queries) >= max_queries:
+        has_compound = bool(part_numbers and pattern_matches)
+        if has_compound:
+            # Primary term: first part number + first pattern match combined.
+            compound = f"{part_numbers[0]} {pattern_matches[0]}"
+            # Breadth terms: remaining pattern matches (not part numbers).
+            breadth_terms = [t for t in pattern_matches[1:]]
+            compound_quota = max(1, round(max_queries * _COMPOUND_QUOTA_FRAC))
+            breadth_quota = max_queries - compound_quota
+
+            # Build compound queries
+            si = 0
+            for _ in range(compound_quota):
+                if si >= len(suffix_indices):
+                    break
+                suffix = ALL_HINT_SUFFIXES[suffix_indices[si]]
+                queries.append(f"{compound} {suffix}")
+                si += 1
+
+            # Build breadth fallback queries (pattern-match only)
+            if breadth_terms:
+                for bt in breadth_terms:
+                    if si >= len(suffix_indices) or len(queries) >= max_queries:
                         break
-            if not added:
-                break
+                    suffix = ALL_HINT_SUFFIXES[suffix_indices[si]]
+                    queries.append(f"{bt} {suffix}")
+                    si += 1
+        else:
+            # Original behavior: spread suffixes across all terms equally.
+            total_terms = len(found)
+            quotas = []
+            for ti in range(total_terms):
+                base = max_queries // total_terms
+                extra = 1 if ti < (max_queries - base * total_terms) else 0
+                quotas.append(base + extra)
+            term_counts = [0] * total_terms
+            si = 0
+            while len(queries) < max_queries:
+                added = False
+                for ti in range(total_terms):
+                    if term_counts[ti] < quotas[ti] and si < len(suffix_indices):
+                        term = found[ti]
+                        suffix = ALL_HINT_SUFFIXES[suffix_indices[si]]
+                        queries.append(f"{term} {suffix}")
+                        si += 1
+                        term_counts[ti] += 1
+                        added = True
+                        if len(queries) >= max_queries:
+                            break
+                if not added:
+                    break
 
     if not queries:
         queries = [prompt[:80]]
@@ -362,6 +420,8 @@ class FirecrawlResearcher:
             only_main = True
             exclude = None
 
+            # Stack Exchange domains: disable main-content-only to keep vote
+            # elements in the HTML, and exclude chrome (topbar, sidebars, etc.)
             if re.search(r'\.(stackexchange|stackoverflow|superuser|serverfault|askubuntu)\.', host):
                 only_main = False
                 exclude = [
@@ -372,11 +432,9 @@ class FirecrawlResearcher:
                     "footer",
                     "header",
                 ]
-                if ClickAction is not None:
-                    actions = [
-                        ClickAction(selector="a.js-show-link"),
-                        WaitAction(milliseconds=1500),
-                    ]
+
+            # Per-domain / generic expand actions (click collapsed content)
+            actions = _build_expand_actions(host)
 
             # --- Try scrape with retry on Fire Engine errors ---
             try:
@@ -409,6 +467,37 @@ class FirecrawlResearcher:
         html = getattr(doc, "html", None) or (
             doc.get("html", "") if isinstance(doc, dict) else ""
         )
+
+        # --- Anti-bot / Cloudflare challenge detection ---
+        # These pages return a JS-challenge interstitial instead of real content.
+        # Detect early so they surface as explicit failures, not empty successes.
+        _challenge_title_re = re.compile(
+            r"just a moment|attention required|cloudflare|verify you are human",
+            re.IGNORECASE,
+        )
+        _challenge_body_re = re.compile(
+            r"enable javascript and cookies to continue|cf-chl|checking your browser"
+            r"|ray id|challenge-platform|turnstile|captcha|verify.*human",
+            re.IGNORECASE,
+        )
+        _meta_title = ""
+        meta_tmp = getattr(doc, "metadata", None) or (
+            doc.get("metadata", {}) if isinstance(doc, dict) else {}
+        )
+        if meta_tmp:
+            _meta_title = getattr(meta_tmp, "title", None) or (
+                meta_tmp.get("title", "") if isinstance(meta_tmp, dict) else ""
+            )
+        _check_text = f"{_meta_title} {markdown[:500]}"
+        if _challenge_title_re.search(_meta_title) or _challenge_body_re.search(_check_text):
+            return Source(url=url, query=query,
+                          error="Blocked by anti-bot challenge (Cloudflare/similar)")
+
+        # Parse Stack Exchange vote counts from raw HTML before markdown
+        # conversion loses the DOM structure.  Only for SE-family domains.
+        votes_map = None
+        if re.search(r'\.(stackexchange|stackoverflow|superuser|serverfault|askubuntu)\.', host):
+            votes_map = _parse_se_votes(html or "")
 
         # Unwrap clickable images: [![alt](img)](link) -> ![alt](img).  Many
         # forum softwares wrap embedded images in a link (e.g. to a "click to
@@ -446,6 +535,7 @@ class FirecrawlResearcher:
         content, images = extract_interleaved_content(
             markdown or "", prompt, max_chars=12000,
             context_terms=context_terms,
+            votes_map=votes_map,
         )
 
         # Strip Firecrawl's <Base64-Image-Removed> placeholders — these are
@@ -470,11 +560,11 @@ class FirecrawlResearcher:
         # rather than just "not obviously junk", to avoid pulling in
         # unrelated page furniture that never had a chance to be filtered
         # by context in the first place.
-        already_have = {img.url for img in images}
+        already_have = {_normalize_image_url(img.url) for img in images}
         html_images = [
             img for img in extract_images(html or "", "", context_terms=context_terms,
                                           base_url=url)
-            if img.url not in already_have and img.relevance_score > 0
+            if _normalize_image_url(img.url) not in already_have and img.relevance_score > 0
         ]
         if html_images:
             extra_block = "\n\n**📎 Additional images found on this page:**\n\n" + "\n\n".join(
@@ -493,26 +583,114 @@ class FirecrawlResearcher:
                 if resp.status_code == 200 and len(resp.content) > 1000:
                     pdf_figures = extract_pdf_figures(resp.content)
                     saved = save_figures(pdf_figures, str(pdf_dir))
-                    already_have = {img.url for img in images}
-                    pdf_img_entries = []
+                    already_have = {_normalize_image_url(img.url) for img in images}
+
+                    # Score each figure using caption + nearby body text for
+                    # richer relevance signals than the bare caption alone.
+                    scored_pdf = []
                     for entry in saved:
                         local_path = entry["filepath"]
                         if local_path in already_have:
                             continue
-                        # Score on caption only -- the filepath contains the
-                        # directory name "pdf_figures" which would falsely
-                        # match the "figure" keyword for every image.
-                        score = _score_image("", entry["caption"], context_terms)
+                        score_text = f"{entry['caption']} {entry.get('context_text', '')}"
+                        score = _score_image("", score_text, context_terms)
                         if score > 0:
-                            pdf_img_entries.append(
-                                ScrapedImage(url=local_path, alt=entry["caption"], relevance_score=score)
-                            )
-                    if pdf_img_entries:
-                        extra = "\n\n**📎 Figures extracted from PDF:**\n\n" + "\n\n".join(
-                            f"![{img.alt}]({img.url})" for img in pdf_img_entries
+                            scored_pdf.append((entry, score))
+
+                    # Try to splice each figure inline at its caption position
+                    # in content, so extract_circuit_entries() picks up real
+                    # neighboring paragraphs as context.  Fall back to a
+                    # trailing block for figures whose caption doesn't appear.
+                    inline_count = 0
+                    trailing: List[str] = []
+                    for entry, score in scored_pdf:
+                        caption = entry["caption"]
+                        local_path = entry["filepath"]
+                        img_md = f"\n\n![{caption}]({local_path})\n\n"
+
+                        # Try to find "Figure N" substring in content
+                        fig_match = re.search(
+                            r"fig(?:ure)?\.?\s*\d+", caption, re.IGNORECASE
                         )
+                        inserted = False
+                        if fig_match and content:
+                            search = fig_match.group(0)
+                            # Find the line containing this figure reference
+                            for line_match in re.finditer(
+                                r"(?m)^.*" + re.escape(search) + r".*$", content
+                            ):
+                                insert_pos = line_match.end()
+                                content = (
+                                    content[:insert_pos] + img_md + content[insert_pos:]
+                                )
+                                inserted = True
+                                inline_count += 1
+                                break
+
+                        if not inserted:
+                            trailing.append(f"![{caption}]({local_path})")
+
+                        images.append(
+                            ScrapedImage(url=local_path, alt=caption, relevance_score=score)
+                        )
+
+                    if trailing:
+                        extra = "\n\n**📎 Figures extracted from PDF:**\n\n" + "\n\n".join(trailing)
                         content = (content + extra) if content else extra.strip()
-                        images = images + pdf_img_entries
+
+                    if scored_pdf:
+                        print(
+                            f"PDF figures for {url}: {inline_count} inline, "
+                            f"{len(trailing)} trailing",
+                            file=sys.stderr,
+                        )
+
+                    # -- PDF table extraction via PyMuPDF --
+                    # Firecrawl flattens tables into run-on paragraphs; use
+                    # PyMuPDF's find_tables() to recover structured tables.
+                    try:
+                        pdf_tables = extract_pdf_tables(resp.content)
+                        table_inline = 0
+                        table_trailing: List[str] = []
+                        for t in pdf_tables:
+                            md_table = t["markdown"]
+                            header = t["header"]
+                            # Try to find a section heading that matches the
+                            # table's first header cell or a nearby keyword.
+                            search_term = header[0] if header else ""
+                            inserted = False
+                            if search_term and content:
+                                for hm in re.finditer(
+                                    r"(?m)^#+\s*.*" + re.escape(search_term) + r".*$",
+                                    content, re.IGNORECASE,
+                                ):
+                                    insert_pos = hm.end()
+                                    content = (
+                                        content[:insert_pos]
+                                        + "\n\n" + md_table + "\n\n"
+                                        + content[insert_pos:]
+                                    )
+                                    inserted = True
+                                    table_inline += 1
+                                    break
+                            if not inserted:
+                                table_trailing.append(md_table)
+
+                        if table_trailing:
+                            tbl_extra = (
+                                "\n\n**📊 Extracted tables:**\n\n"
+                                + "\n\n".join(table_trailing)
+                            )
+                            content = (content + tbl_extra) if content else tbl_extra.strip()
+
+                        if pdf_tables:
+                            print(
+                                f"PDF tables for {url}: {table_inline} inline, "
+                                f"{len(table_trailing)} trailing",
+                                file=sys.stderr,
+                            )
+                    except Exception as te:
+                        print(f"PDF table extraction failed for {url}: {te}", file=sys.stderr)
             except Exception as e:
                 print(f"PDF figure extraction failed for {url}: {e}", file=sys.stderr)
 
@@ -781,6 +959,7 @@ class GrokSummarizer:
 IMG_TAG_RE = re.compile(r'<img[^>]+src=["\']([^"\']+)["\'][^>]*>', re.IGNORECASE)
 ALT_RE = re.compile(r'alt=["\']([^"\']*)["\']', re.IGNORECASE)
 MD_IMG_RE = re.compile(r'!\[([^\]]*)\]\(([^)\s]+)')
+IMG_DIM_RE = re.compile(r'(?:width|height)=["\']?(\d+)["\']?', re.IGNORECASE)
 
 RELEVANCE_KEYWORDS = [
     "schematic", "circuit", "diagram", "block diagram", "pinout",
@@ -813,20 +992,34 @@ JUNK_IMAGE_KEYWORDS = [
     "social_share", "card-image", "card_image", "related-article",
     "related_article", "recommend", "sponsor", "advert", "stock-photo",
     "stockphoto",
+    # Social login / share button icons (XenForo, etc.)
+    "facebook", "google", "github", "linkedin", "twitter", "youtube",
+    "instagram", "wechat", "weibo", "reddit",
+    # Lazy-loading placeholder images
+    "loading",
 ]
 
-# Line-level noise: cookie notices, nav/share/subscribe cruft that
-# only_main_content sometimes lets through anyway.
-NOISE_LINE_PATTERNS = [
-    r"cookie", r"we use cookies", r"accept all cookies", r"privacy policy",
-    r"subscribe to our newsletter", r"sign in", r"log in", r"create an account",
-    r"advertisement", r"sponsored", r"related articles", r"you may also like",
-    r"share this", r"follow us on", r"skip to (main )?content", r"back to top",
-    r"all rights reserved", r"terms of (use|service)",
-]
-_NOISE_LINE_RE = re.compile("|".join(NOISE_LINE_PATTERNS), re.IGNORECASE)
 _MD_LINK_ONLY_RE = re.compile(r"^\s*[-*]?\s*\[([^\]]+)\]\(([^)]+)\)\s*$")
 _MD_LINK_RE = re.compile(r"\[[^\]]+\]\([^)]+\)")
+
+
+def _normalize_image_url(url: str) -> str:
+    """Normalize an image URL for deduplication: strip tracking query params,
+    normalize http/https, remove trailing slashes."""
+    from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+    parsed = urlparse(url)
+    # Normalize scheme and host — always prefer https
+    scheme = "https"
+    host = parsed.hostname.lower() if parsed.hostname else ""
+    # Strip common tracking params
+    tracking_params = {"v", "version", "t", "ts", "timestamp", "cache",
+                       "imageView2", "x-oss-process", "w", "h", "quality"}
+    qs = parse_qs(parsed.query, keep_blank_values=False)
+    clean_qs = {k: v for k, v in qs.items() if k.lower() not in tracking_params}
+    clean_query = urlencode(clean_qs, doseq=True) if clean_qs else ""
+    # Rebuild with normalized path (strip trailing slash for consistency)
+    path = parsed.path.rstrip("/")
+    return urlunparse((scheme, host, path, parsed.params, clean_query, ""))
 
 
 def _is_nav_row(stripped_line: str) -> bool:
@@ -864,7 +1057,8 @@ def _block_images(block: str, context_terms: Optional[List[str]] = None) -> List
     return imgs
 
 
-def _block_text_score(block: str, prompt_terms, prompt_words, context_terms=None) -> int:
+def _block_text_score(block: str, prompt_terms, prompt_words, context_terms=None,
+                      vote_count: int = 0) -> int:
     lower = block.lower()
     score = 0
     for term in prompt_terms:
@@ -882,12 +1076,16 @@ def _block_text_score(block: str, prompt_terms, prompt_words, context_terms=None
         score += 2
     if block.startswith("#") or "|" in block:
         score += 1
+    # Stack Exchange / forum upvote bonus: +1 per 5 upvotes, capped at +15
+    if vote_count > 0:
+        score += min(vote_count // 5, 15)
     return score
 
 
 def extract_interleaved_content(
     markdown: str, prompt: str, max_chars: int = 9000,
     context_terms: Optional[List[str]] = None,
+    votes_map: Optional[Dict[str, Dict]] = None,
 ):
     """
     Walk the scraped markdown top-to-bottom and keep the blocks (paragraphs,
@@ -907,6 +1105,7 @@ def extract_interleaved_content(
     """
     cleaned = _clean_boilerplate(markdown)
     blocks = _split_blocks(cleaned)
+    blocks = _dedupe_blocks(blocks)
     if not blocks:
         return "", []
 
@@ -930,7 +1129,10 @@ def extract_interleaved_content(
         else:
             if len(block) < 40:
                 continue  # stray menu items / bare links, not real content
-            score = _block_text_score(block, prompt_terms, prompt_words, context_terms)
+            vote_info = _match_block_to_vote(block, votes_map or {})
+            vote_count = vote_info.get("votes", 0)
+            score = _block_text_score(block, prompt_terms, prompt_words,
+                                      context_terms, vote_count=vote_count)
             scored.append((idx, "text", score, block, imgs))
 
     if not scored:
@@ -1028,6 +1230,144 @@ def extract_interleaved_content(
     return "\n\n".join(kept_blocks), kept_images
 
 
+# --------------------------------------------------------------------------
+# Circuits & Schematics gallery -- one card per image, full context attached
+# --------------------------------------------------------------------------
+
+def extract_circuit_entries(source: "Source") -> List[Dict]:
+    """
+    Build a flat, per-image list of "circuit card" entries from an already
+    -interleaved Source.markdown, for a dedicated schematics/circuits view.
+
+    Unlike the flowing research report (which mixes text and images into
+    one continuous read), this pulls each image out with BOTH of its
+    immediate neighboring text blocks attached IN FULL -- nothing
+    truncated, nothing summarized -- so a schematic is never shown without
+    the paragraph(s) that were actually describing it on the source page.
+
+    Returns a list of dicts, one per image, in original reading order:
+      {
+        "heading":         nearest preceding markdown heading in the
+                            source (falls back to the source title),
+        "image_url":       image URL, or a local file path for PDF-
+                            extracted figures,
+        "alt":              image alt text / caption,
+        "relevance_score":  int, carried over from the scored ScrapedImage,
+        "context_before":   full text block immediately before the image
+                             (empty string if none),
+        "context_after":    full text block immediately after the image
+                             (empty string if none),
+        "source_title":     source.title,
+        "source_url":       source.url,
+        "query":            source.query,
+      }
+    """
+    blocks = _split_blocks(source.markdown)
+    if not blocks:
+        return []
+
+    def _is_image_block(b: str) -> bool:
+        imgs = _block_images(b)
+        return bool(imgs) and len(MD_IMG_RE.sub("", b).strip()) < 20
+
+    entries: List[Dict] = []
+    current_heading = source.title
+
+    for i, block in enumerate(blocks):
+        if block.startswith("#"):
+            current_heading = block.lstrip("#").strip() or current_heading
+            continue
+
+        if not _is_image_block(block):
+            continue
+
+        context_before = ""
+        for j in range(i - 1, -1, -1):
+            b = blocks[j]
+            if b.startswith("#") or _is_image_block(b):
+                continue
+            context_before = b
+            break
+
+        context_after = ""
+        for j in range(i + 1, len(blocks)):
+            b = blocks[j]
+            if b.startswith("#") or _is_image_block(b):
+                continue
+            context_after = b
+            break
+
+        # Don't let noise-line context (login widgets, nav chrome, etc.)
+        # inflate the score of junk images.
+        if context_before and _NOISE_LINE_RE.search(context_before):
+            context_before = ""
+        if context_after and _NOISE_LINE_RE.search(context_after):
+            context_after = ""
+
+        for img in _block_images(block):
+            # Always recompute image score — cached scores may be stale.
+            img_score = _score_image(img.url, img.alt, context_terms=None)
+            # Combine image score with text relevance of surrounding context
+            # so cards with relevant text aren't shown as score-0 junk.
+            text_score = 0
+            if context_before:
+                text_score += _block_text_score(context_before, [], [],
+                                                context_terms=None)
+            if context_after:
+                text_score += _block_text_score(context_after, [], [],
+                                                context_terms=None)
+            combined_score = img_score
+            if img_score >= 0:
+                # Only boost neutral/positive images with text context.
+                # Clearly-junk images (social icons, loading spinners)
+                # should not be rescued by surrounding text.
+                combined_score = max(img_score, text_score)
+            entries.append({
+                "heading": current_heading,
+                "image_url": img.url,
+                "alt": img.alt or "",
+                "relevance_score": combined_score,
+                "context_before": context_before,
+                "context_after": context_after,
+                "source_title": source.title,
+                "source_url": source.url,
+                "query": source.query,
+            })
+
+    return entries
+
+
+def build_circuit_gallery(corpus: "ResearchCorpus") -> List[Dict]:
+    """Run extract_circuit_entries() across every successfully-scraped
+    source in the corpus and return one flat, ordered list -- the full
+    data set behind the 'Circuits & Schematics' tab."""
+    gallery: List[Dict] = []
+    seen: set = set()
+    for s in corpus.sources:
+        if s.error:
+            continue
+        for entry in extract_circuit_entries(s):
+            # Safety-net dedup: drop exact (image_url, context_before,
+            # context_after) duplicates regardless of upstream root cause.
+            key = (entry["image_url"], entry["context_before"], entry["context_after"])
+            if key in seen:
+                continue
+            seen.add(key)
+            # Also dedup by normalized image URL alone — if the same image
+            # appears with different tracking params or http vs https.
+            norm_url = _normalize_image_url(entry["image_url"])
+            url_key = ("__url__", norm_url)
+            if url_key in seen:
+                continue
+            seen.add(url_key)
+            # Drop clearly-junk entries (social icons, loading spinners,
+            # unrelated teasers) before they reach the UI.
+            if entry["relevance_score"] <= 0:
+                continue
+            gallery.append(entry)
+    return gallery
+
+
 def extract_images(html: str, markdown: str = "", context_terms: Optional[List[str]] = None,
                    base_url: str = "") -> List[ScrapedImage]:
     found: Dict[str, ScrapedImage] = {}
@@ -1043,7 +1383,12 @@ def extract_images(html: str, markdown: str = "", context_terms: Optional[List[s
             continue
         alt_match = ALT_RE.search(src)
         alt = _html.unescape(alt_match.group(1)) if alt_match else ""
-        found[url] = ScrapedImage(url=url, alt=alt, relevance_score=_score_image(url, alt, context_terms))
+        # Parse width/height from HTML attributes (cheap, no network call)
+        dims = IMG_DIM_RE.findall(src)
+        w = int(dims[0]) if len(dims) >= 1 and dims[0].isdigit() else None
+        h = int(dims[1]) if len(dims) >= 2 and dims[1].isdigit() else None
+        found[url] = ScrapedImage(url=url, alt=alt,
+                                  relevance_score=_score_image(url, alt, context_terms, w, h))
 
     for m in MD_IMG_RE.finditer(markdown or ""):
         alt, url = _html.unescape(m.group(1)), _html.unescape(m.group(2))
@@ -1059,7 +1404,8 @@ def extract_images(html: str, markdown: str = "", context_terms: Optional[List[s
     return images
 
 
-def _score_image(url: str, alt: str, context_terms: Optional[List[str]] = None) -> int:
+def _score_image(url: str, alt: str, context_terms: Optional[List[str]] = None,
+                 width: Optional[int] = None, height: Optional[int] = None) -> int:
     text = f"{url} {alt}".lower()
     score = 0
     for kw in RELEVANCE_KEYWORDS:
@@ -1076,6 +1422,22 @@ def _score_image(url: str, alt: str, context_terms: Optional[List[str]] = None) 
     # Small tracking pixels / svg sprites are rarely useful
     if url.lower().endswith((".svg",)) and "schematic" not in text:
         score -= 1
+    # Soft penalty for banner/logo-shaped images based on HTML dimensions.
+    # Skip if dimensions unknown — some real schematics are wide.
+    if width and height and width > 0 and height > 0:
+        aspect = width / height
+        # Very wide + short = horizontal banner (e.g. 728x90 leaderboard)
+        if aspect > 4 and width > 400:
+            score -= 2
+        # Very tall + narrow = sidebar ad / mobile banner
+        if aspect < 0.25 and height > 400:
+            score -= 2
+        # Large hero image with no meaningful alt text
+        if width > 1200 and len(alt.strip()) < 5:
+            score -= 3
+        # Tiny icon / tracking pixel
+        if width < 50 or height < 50:
+            score -= 1
     return score
 
 
@@ -1128,6 +1490,224 @@ def _fix_latex_math(markdown: str) -> str:
     return result
 
 
+# -- Stack Exchange vote parsing -------------------------------------------
+
+def _parse_se_votes(html: str) -> Dict[str, Dict]:
+    """
+    Parse vote counts and accepted-answer status from Stack Exchange HTML.
+
+    Returns a dict mapping a text fingerprint (first ~120 chars of the
+    answer/comment body, normalised) to {"votes": int, "accepted": bool}.
+
+    Uses BeautifulSoup selectors when available, falls back to text-based
+    regex extraction if BS4 isn't installed or selectors fail.
+    """
+    if not html:
+        return {}
+
+    votes_map: Dict[str, Dict] = {}
+
+    if _HAS_BS4:
+        try:
+            soup = BeautifulSoup(html, "html.parser")
+            # Answers: look for post-layout containers
+            for ans in soup.select(".answer, .post-layout"):
+                # Vote count — primary selector, fallback text regex
+                vc_el = ans.select_one(".js-vote-count")
+                if vc_el is None:
+                    vc_el = ans.select_one(".vote-count-post")
+                vote_text = vc_el.get_text(strip=True) if vc_el else "0"
+                try:
+                    vote_count = int(vote_text)
+                except (ValueError, TypeError):
+                    vote_count = 0
+
+                is_accepted = bool(
+                    ans.select_one(".accepted-answer")
+                    or ans.select_one(".s-accepted-indicator")
+                    or ans.select_one('[class*="accepted"]')
+                )
+
+                # Answer body text
+                body = ans.select_one(".post-text, .answercell, .s-prose")
+                if body is None:
+                    continue
+                body_text = body.get_text(" ", strip=True)
+                if len(body_text) < 30:
+                    continue
+                fingerprint = body_text[:120].lower()
+                votes_map[fingerprint] = {
+                    "votes": vote_count,
+                    "accepted": is_accepted,
+                }
+
+            # Comments — less critical but still useful signals
+            for cm in soup.select(".comment"):
+                score_el = cm.select_one(".vote-count-post, .comment-score")
+                vote_text = score_el.get_text(strip=True) if score_el else "0"
+                try:
+                    vote_count = int(vote_text)
+                except (ValueError, TypeError):
+                    vote_count = 0
+                body = cm.select_one(".comment-text, .comment-body")
+                if body is None:
+                    continue
+                body_text = body.get_text(" ", strip=True)
+                if len(body_text) < 20:
+                    continue
+                fingerprint = body_text[:120].lower()
+                votes_map[fingerprint] = {
+                    "votes": vote_count,
+                    "accepted": False,
+                }
+            return votes_map
+        except Exception:
+            pass  # fall through to regex fallback
+
+    # --- Text-based fallback: extract "vote-count" numbers + nearby text ---
+    # SE renders vote counts as plain numbers near answer text; the regex
+    # approach can't perfectly align them but gives a reasonable approximation.
+    vote_blocks = re.split(
+        r'(?=\b(?:accepted|answer|comment)\b)', html, flags=re.IGNORECASE
+    )
+    for block in vote_blocks:
+        nums = re.findall(r'(?<!\d)(\d{1,6})(?!\d)', block[:300])
+        text_match = re.search(r'<p[^>]*>(.*?)</p>', block, re.DOTALL)
+        if not text_match:
+            continue
+        body_text = re.sub(r'<[^>]+>', '', text_match.group(1)).strip()
+        if len(body_text) < 30:
+            continue
+        fingerprint = body_text[:120].lower()
+        vote_count = int(nums[0]) if nums else 0
+        is_accepted = "accepted" in block[:200].lower()
+        votes_map[fingerprint] = {"votes": vote_count, "accepted": is_accepted}
+
+    return votes_map
+
+
+def _match_block_to_vote(block_text: str, votes_map: Dict[str, Dict]) -> Dict:
+    """Find the best matching vote entry for a markdown text block."""
+    if not votes_map:
+        return {"votes": 0, "accepted": False}
+    text_lower = block_text.lower()[:120]
+    # Direct prefix match
+    for fp, info in votes_map.items():
+        if text_lower.startswith(fp[:60]) or fp.startswith(text_lower[:60]):
+            return info
+    # Overlapping token match (>50% overlap)
+    block_tokens = set(text_lower.split())
+    best_match, best_overlap = None, 0
+    for fp, info in votes_map.items():
+        fp_tokens = set(fp.split())
+        if not fp_tokens:
+            continue
+        overlap = len(block_tokens & fp_tokens) / max(len(fp_tokens), 1)
+        if overlap > best_overlap and overlap > 0.5:
+            best_overlap = overlap
+            best_match = info
+    return best_match or {"votes": 0, "accepted": False}
+
+
+# -- Per-domain expand actions for Firecrawl --------------------------------
+
+# Each entry maps a domain substring to a list of (selector, wait_ms) pairs
+# that should be clicked before scraping to reveal hidden/collapsed content.
+# The pipeline chains ClickAction+WaitAction for each pair, capped at 5 total.
+_EXPAND_SELECTORS = {
+    "stackexchange": [
+        ("a.js-show-link", 1500),
+    ],
+    "stackoverflow": [
+        ("a.js-show-link", 1500),
+    ],
+    "allaboutcircuits.com": [
+        (".bbCodeBlock-expandContent", 1000),
+        ("[data-toggle='bbCodeBlock-expandContent']", 1000),
+    ],
+    "reddit.com": [
+        ("[data-click-events='toggle_comment']", 1500),
+        ("button[aria-label='more comments']", 1500),
+    ],
+}
+# Generic fallback selectors to try on any domain (cheap no-ops if absent)
+_GENERIC_EXPAND_SELECTORS = [
+    ("[aria-expanded='false']", 1000),
+    ("button:has-text('Show more')", 800),
+    ("button:has-text('Read more')", 800),
+]
+_MAX_CLICK_ACTIONS = 5
+
+
+def _build_expand_actions(host: str) -> Optional[list]:
+    """Build a list of ClickAction+WaitAction pairs for the given host."""
+    if ClickAction is None or WaitAction is None:
+        return None
+    actions = []
+    # Domain-specific selectors first
+    for domain_key, selectors in _EXPAND_SELECTORS.items():
+        if domain_key in host:
+            for sel, wait_ms in selectors:
+                actions.append(ClickAction(selector=sel))
+                actions.append(WaitAction(milliseconds=wait_ms))
+            break
+    # Add generic fallbacks (up to cap)
+    for sel, wait_ms in _GENERIC_EXPAND_SELECTORS:
+        if len(actions) >= _MAX_CLICK_ACTIONS * 2:
+            break
+        actions.append(ClickAction(selector=sel))
+        actions.append(WaitAction(milliseconds=wait_ms))
+    if not actions:
+        return None
+    return actions[:_MAX_CLICK_ACTIONS * 2]
+
+
+# -- Data cleaning: extended noise patterns --------------------------------
+
+NOISE_LINE_PATTERNS = [
+    r"cookie", r"we use cookies", r"accept all cookies", r"privacy policy",
+    r"subscribe to our newsletter", r"sign in", r"log in", r"create an account",
+    r"advertisement", r"sponsored", r"related articles", r"you may also like",
+    r"share this", r"follow us on", r"skip to (main )?content", r"back to top",
+    r"all rights reserved", r"terms of (use|service)",
+    # Manufacturer datasheet boilerplate (repeat on every page)
+    r"submit (?:documentation|document)\s+feedback",
+    r"copyright\s*©?\s*\d{4}.*?(?:incorporated|inc\.?|corp\.?|ltd\.?|technology|semiconductor|company)",
+    r"product folder links?:?",
+    # Forum-specific noise: signatures, voting UI, widget cruft
+    r"(?:was this (?:answer|article) helpful|did you find this useful)",
+    r"(?:upvote|downvote|flag this|edit|share|improve this answer)",
+    r"(?:related questions|you might also like|browse other questions)",
+    r"(?:see (?:also|more)|related topics|more from (?:this|stack))",
+    r"(?:sign up|log in|register|join this community)",
+    r"(?:ask your own question|post as a guest|draft saved|draft discarded)",
+    r"(?:edited \d+ (?:mins?|hours?|days?) ago|answered \d+ (?:mins?|hours?|days?) ago)",
+    r"(?:thanks for (?:contributing|answering)|hope this helps)",
+    r"(?:edited by|answered by|community wiki)",
+    # Forum metadata: "Posted on [August 01st 2023 | 7:51 am](url)" —
+    # requires pipe + am/pm to avoid matching normal prose like "Posted on the forum".
+    # Uses \A (not ^) because this list is joined with | into one regex.
+    r"\Aposted\s+(?:on|by)\b.+\|\s*\d+[:::\d]*\s*(?:am|pm)\b",
+    # Datasheet revision-date header stamp: "LM386 SNAS450 – MAY 2004 – REVISED AUGUST 2023"
+    # Requires "REVISED <month> <year>" suffix specifically — won't match normal prose.
+    r"\A.*\b(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\w*\s+\d{4}\s+[-–—]\s+REVISED\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\w*\s+\d{4}\s*\Z",
+    # Login / social-widget chrome (XenForo, EEWorld, etc.)
+    r"join our engineering community",
+    r"sign[\s\-]?in with:?",
+    # Standalone social-platform name (complete line, not inside a sentence)
+    r"\A\s*(?:facebook|google|github|linkedin|twitter)\s*\Z",
+    # Standalone bare digit line (like/view/comment counter with no label)
+    r"\A\s*\d{1,6}\s*\Z",
+    # EEWorld / Chinese electronics site widget chrome
+    r"follow\s+eeworld",
+    r"(?:next|previous)\s+article[：:]",
+    # EEWorld download icon + link lines (short lines that are just an icon
+    # image followed by a download link, no real content)
+    r"!\[[^\]]*\]\([^)]*xzzxicon\.png\)",
+]
+_NOISE_LINE_RE = re.compile("|".join(NOISE_LINE_PATTERNS), re.IGNORECASE)
+
+
 def _clean_boilerplate(markdown: str) -> str:
     """
     Strip cookie notices, nav/share/subscribe cruft, and runs of bare
@@ -1164,6 +1744,35 @@ def _clean_boilerplate(markdown: str) -> str:
     return "\n".join(cleaned)
 
 
+def _dedupe_blocks(blocks: List[str]) -> List[str]:
+    """
+    Drop near-duplicate blocks from a list of markdown blocks.
+    Normalises whitespace and case before comparing; keeps the first occurrence.
+    """
+    seen: List[str] = []
+    out: List[str] = []
+    for block in blocks:
+        # Strip trailing punctuation and normalise whitespace for comparison
+        normalised = re.sub(r"\s+", " ", block.lower().strip())
+        norm_stripped = re.sub(r"[.,;:!?]+$", "", normalised)
+        is_dup = False
+        for prev, prev_stripped in seen:
+            if normalised == prev:
+                is_dup = True
+                break
+            # Check prefix overlap on stripped text (>60 chars shared = dup)
+            min_len = min(len(norm_stripped), len(prev_stripped))
+            if min_len > 40:
+                compare_len = min(min_len, 80)
+                if norm_stripped[:compare_len] == prev_stripped[:compare_len]:
+                    is_dup = True
+                    break
+        if not is_dup:
+            seen.append((normalised, norm_stripped))
+            out.append(block)
+    return out
+
+
 def extract_relevant_text(markdown: str, prompt: str, max_chars: int = 6000) -> str:
     """
     Rank paragraphs of scraped markdown by relevance to the design prompt
@@ -1172,6 +1781,7 @@ def extract_relevant_text(markdown: str, prompt: str, max_chars: int = 6000) -> 
     """
     cleaned = _clean_boilerplate(markdown)
     paragraphs = [p for p in re.split(r"\n\s*\n", cleaned)]
+    paragraphs = _dedupe_blocks(paragraphs)
 
     prompt_lower = (prompt or "").lower()
     prompt_terms = set()
