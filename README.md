@@ -34,7 +34,7 @@ git clone https://github.com/Sada2108/Web-Scrapper-.git
 cd Web-Scrapper-
 
 cp .env.example .env
-# Edit .env: set FIRECRAWL_API_KEY (required), GROK_API_KEY (optional)
+# Edit .env: set FIRECRAWL_API_KEY (required), GROQ_API_KEY (optional)
 
 pip install -r requirements.txt
 ```
@@ -45,7 +45,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Paste your API keys in the sidebar or set `FIRECRAWL_API_KEY` / `GROK_API_KEY` env vars.
+Paste your API keys in the sidebar or set `FIRECRAWL_API_KEY` / `GROQ_API_KEY` env vars.
 
 ### Run standalone (no UI)
 
@@ -73,10 +73,10 @@ Tests 4 suites (Stack Exchange, DigiKey, TI.com, Wikipedia) — exits 0 on pass,
 
 | File | Purpose |
 |---|---|
-| `scraper.py` | Core engine: query generation, search, scrape, relevance scoring, interleaved extraction, Grok summary, cache |
+| `scraper.py` | Core engine: query generation, search, scrape, relevance scoring, interleaved extraction, Groq summary, cache |
 | `app.py` | Streamlit UI |
 | `test_scraper.py` | Regression tests (12 assertions across 4 URL suites) |
-| `check_grok.py` | Standalone Grok API key tester |
+| `check_groq.py` | Standalone Groq API key tester |
 | `check.py` | Quick Firecrawl connectivity test |
 
 ## Known limitations

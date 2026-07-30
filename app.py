@@ -73,12 +73,12 @@ with st.sidebar:
         help="Get one at firecrawl.dev. Falls back to FIRECRAWL_API_KEY env var.",
     )
 
-    grok_api_key = st.text_input(
-        "Grok (xAI) API key — optional",
-        value=os.environ.get("GROK_API_KEY", ""),
+    groq_api_key = st.text_input(
+        "Groq API key — optional",
+        value=os.environ.get("GROQ_API_KEY", ""),
         type="password",
         help=(
-            "Get one at console.x.ai. Falls back to GROK_API_KEY env var. "
+            "Get one at console.groq.com (free, no credit card). Falls back to GROQ_API_KEY env var. "
             "Powers the 'AI Summary' section at the top of the report. "
             "Leave blank to skip it — scraping and the interleaved "
             "text+image report work fine without it."
@@ -163,7 +163,7 @@ if run:
             results_per_query=results_per_query,
             max_sources_to_scrape=max_sources,
             progress_cb=progress_cb,
-            grok_api_key=grok_api_key or None,
+            groq_api_key=groq_api_key or None,
         )
         st.session_state.corpus = corpus
         progress_bar.progress(100, text="Done")
@@ -252,7 +252,7 @@ if corpus:
                     st.caption(f"❌ {s.url} — {s.error}")
 
     with tab_circuits:
-        gallery = build_circuit_gallery(corpus)
+        gallery = build_circuit_gallery(corpus, groq_api_key=groq_api_key or None)
 
         if not gallery:
             st.info("No circuits or schematics were found for this prompt.")

@@ -28,6 +28,7 @@ import sys
 import time
 import hashlib
 import requests
+from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -59,11 +60,11 @@ _MODULE_DIR = Path(__file__).parent.resolve()
 CACHE_DIR = Path(os.environ.get("PCB_SCRAPER_CACHE", str(_MODULE_DIR / "cache"))).resolve()
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-# xAI Grok API (OpenAI-compatible chat completions endpoint). Used for the
+# Groq API (OpenAI-compatible chat completions endpoint). Used for the
 # optional "AI Summary" pass over the scraped corpus -- everything else in
 # this file works with zero LLM calls, this is purely additive.
-GROK_API_BASE = "https://api.x.ai/v1"
-GROK_MODEL = os.environ.get("GROK_MODEL", "grok-4.3")
+GROQ_API_BASE = "https://api.groq.com/openai/v1"
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
 # Words/phrases that make a query more likely to return schematic-rich,
 # electronics-engineering sources rather than generic marketing pages.
@@ -402,7 +403,8 @@ class FirecrawlResearcher:
 
     # -- scrape --------------------------------------------------------------
     def scrape_source(self, url: str, query: str = "", prompt: str = "",
-                      context_terms: Optional[List[str]] = None) -> Source:
+                      context_terms: Optional[List[str]] = None,
+                      groq_api_key: Optional[str] = None) -> Source:
         """Scrape a single URL for markdown + html, then pull out images."""
         host = urlparse(url).hostname or ""
 
@@ -536,6 +538,7 @@ class FirecrawlResearcher:
             markdown or "", prompt, max_chars=12000,
             context_terms=context_terms,
             votes_map=votes_map,
+            groq_api_key=groq_api_key,
         )
 
         # Strip Firecrawl's <Base64-Image-Removed> placeholders — these are
@@ -819,7 +822,7 @@ class FirecrawlResearcher:
         results_per_query: int = 4,
         max_sources_to_scrape: int = 12,
         progress_cb=None,
-        grok_api_key: Optional[str] = None,
+        groq_api_key: Optional[str] = None,
     ) -> ResearchCorpus:
         """
         End-to-end: prompt -> queries -> search -> scrape -> corpus.
@@ -864,7 +867,8 @@ class FirecrawlResearcher:
             if progress_cb:
                 progress_cb("scraping", i + 1, len(candidates))
             src = self.scrape_source(c["url"], query=c.get("query", ""), prompt=prompt,
-                                     context_terms=context_terms)
+                                     context_terms=context_terms,
+                                     groq_api_key=groq_api_key)
             if not src.title:
                 src.title = c.get("title", src.url)
             sources.append(src)
@@ -872,10 +876,10 @@ class FirecrawlResearcher:
         corpus = ResearchCorpus(prompt=prompt, queries=queries, sources=sources,
                                search_errors=search_errors)
 
-        if grok_api_key:
+        if groq_api_key:
             if progress_cb:
                 progress_cb("summarizing", 1, 1)
-            summarizer = GrokSummarizer(api_key=grok_api_key)
+            summarizer = GroqSummarizer(api_key=groq_api_key)
             result = summarizer.summarize_corpus(corpus)
             if result:
                 corpus.summary = result.get("text")
@@ -885,16 +889,16 @@ class FirecrawlResearcher:
         return corpus
 
 
-class GrokSummarizer:
+class GroqSummarizer:
     """
-    Optional AI Summary pass using xAI's Grok API (OpenAI-compatible
+    Optional AI Summary pass using Groq's API (OpenAI-compatible
     /chat/completions endpoint). This never blocks or breaks the rest of
     the pipeline -- if there's no key, or the call fails, run_pipeline()
     just leaves corpus.summary as None and everything else still works.
     """
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.environ.get("GROK_API_KEY")
+        self.api_key = api_key or os.environ.get("GROQ_API_KEY")
 
     @property
     def enabled(self) -> bool:
@@ -928,13 +932,13 @@ class GrokSummarizer:
         )
         try:
             resp = requests.post(
-                f"{GROK_API_BASE}/chat/completions",
+                f"{GROQ_API_BASE}/chat/completions",
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": GROK_MODEL,
+                    "model": GROQ_MODEL,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
@@ -949,7 +953,65 @@ class GrokSummarizer:
             text = data["choices"][0]["message"]["content"]
             return {"text": text}
         except Exception as e:
-            return {"error": f"Grok summary failed: {e}"}
+            return {"error": f"Groq summary failed: {e}"}
+
+
+def _groq_reasonableness_batch(
+    items: List[str],
+    system_prompt: str,
+    api_key: Optional[str] = None,
+    timeout: int = 30,
+) -> set:
+    """Batch-check items for reasonableness via one Groq API call.
+
+    Returns a set of integer indices that passed the gate.  On any failure
+    (no API key, network error, bad JSON), returns *all* indices so callers
+    silently skip the gate rather than dropping content.
+    """
+    api_key = api_key or os.environ.get("GROQ_API_KEY")
+    if not api_key or not items:
+        return set(range(len(items)))
+
+    numbered = "\n".join(
+        f"[{i}] {text[:800]}" for i, text in enumerate(items)
+    )
+    user_prompt = (
+        "Below are numbered items (index in brackets). For each, decide "
+        "whether it is REASONABLE: on-topic, coherent, substantive, and "
+        "not spam / meme / pure-social fluff (\"thanks!\", \"lol\", "
+        "\"+1\").  Also drop near-duplicates.\n\n"
+        f"{numbered}\n\n"
+        "Respond ONLY with a JSON array of objects: "
+        "[{\"index\": int, \"reasonable\": bool}, ...]"
+    )
+    try:
+        resp = requests.post(
+            f"{GROQ_API_BASE}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": GROQ_MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.1,
+                "max_tokens": 1500,
+            },
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        text = resp.json()["choices"][0]["message"]["content"]
+        # Extract JSON array from possible markdown fences
+        m = re.search(r"\[.*\]", text, re.DOTALL)
+        if not m:
+            return set(range(len(items)))
+        results = json.loads(m.group())
+        return {r["index"] for r in results if r.get("reasonable")}
+    except Exception:
+        return set(range(len(items)))
 
 
 # --------------------------------------------------------------------------
@@ -1058,7 +1120,8 @@ def _block_images(block: str, context_terms: Optional[List[str]] = None) -> List
 
 
 def _block_text_score(block: str, prompt_terms, prompt_words, context_terms=None,
-                      vote_count: int = 0) -> int:
+                      vote_count: int = 0,
+                      timestamp: Optional[datetime] = None) -> int:
     lower = block.lower()
     score = 0
     for term in prompt_terms:
@@ -1079,6 +1142,15 @@ def _block_text_score(block: str, prompt_terms, prompt_words, context_terms=None
     # Stack Exchange / forum upvote bonus: +1 per 5 upvotes, capped at +15
     if vote_count > 0:
         score += min(vote_count // 5, 15)
+    # Recency bonus: decays linearly over 90 days, capped at +15.
+    # A fresh 0-vote comment isn't automatically buried under an old
+    # high-vote one.
+    if timestamp is not None:
+        now = datetime.now(timezone.utc)
+        ts = timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=timezone.utc)
+        days_old = max((now - ts).days, 0)
+        if days_old < 90:
+            score += int(15 * (1 - days_old / 90))
     return score
 
 
@@ -1086,6 +1158,7 @@ def extract_interleaved_content(
     markdown: str, prompt: str, max_chars: int = 9000,
     context_terms: Optional[List[str]] = None,
     votes_map: Optional[Dict[str, Dict]] = None,
+    groq_api_key: Optional[str] = None,
 ):
     """
     Walk the scraped markdown top-to-bottom and keep the blocks (paragraphs,
@@ -1118,22 +1191,24 @@ def extract_interleaved_content(
     prompt_words = {w.lower() for w in re.findall(r"[A-Za-z]{4,}", prompt or "")} - STOPWORDS
 
     # classify + score every block, keeping original index for reordering
-    scored = []  # (idx, kind, score, block, images_in_block)
+    scored = []  # (idx, kind, score, block, images_in_block, timestamp)
     for idx, block in enumerate(blocks):
         imgs = _block_images(block, context_terms)
         text_without_imgs = MD_IMG_RE.sub("", block).strip()
         is_image_block = bool(imgs) and len(text_without_imgs) < 20
         if is_image_block:
             score = max((i.relevance_score for i in imgs), default=0)
-            scored.append((idx, "image", score, block, imgs))
+            scored.append((idx, "image", score, block, imgs, None))
         else:
             if len(block) < 40:
                 continue  # stray menu items / bare links, not real content
             vote_info = _match_block_to_vote(block, votes_map or {})
             vote_count = vote_info.get("votes", 0)
+            ts = vote_info.get("timestamp")
             score = _block_text_score(block, prompt_terms, prompt_words,
-                                      context_terms, vote_count=vote_count)
-            scored.append((idx, "text", score, block, imgs))
+                                      context_terms, vote_count=vote_count,
+                                      timestamp=ts)
+            scored.append((idx, "text", score, block, imgs, ts))
 
     if not scored:
         return cleaned[:max_chars], []
@@ -1159,13 +1234,13 @@ def extract_interleaved_content(
         for offset in range(1, window + 1):
             for neighbor_pos in (pos - offset, pos + offset):
                 if 0 <= neighbor_pos < len(scored):
-                    n_idx, n_kind, n_score, n_block, n_imgs = scored[neighbor_pos]
+                    n_idx, n_kind, n_score, n_block, n_imgs, _n_ts = scored[neighbor_pos]
                     if n_kind == "text":
                         best = max(best, n_score)
         return best
 
     keep = set()
-    for pos, (idx, kind, score, block, imgs) in enumerate(scored):
+    for pos, (idx, kind, score, block, imgs, _ts) in enumerate(scored):
         if kind == "text":
             if score > 0:
                 keep.add(idx)
@@ -1188,11 +1263,11 @@ def extract_interleaved_content(
     # paragraph should NOT pull in a neighboring image just because it's
     # adjacent (that's how logos/icons next to real content used to sneak
     # in) -- only images pull in text, never the reverse.
-    for pos, (idx, kind, score, block, imgs) in enumerate(scored):
+    for pos, (idx, kind, score, block, imgs, _ts) in enumerate(scored):
         if kind == "image" and idx in keep:
             for neighbor_pos in (pos - 1, pos + 1):
                 if 0 <= neighbor_pos < len(scored):
-                    n_idx, n_kind, n_score, n_block, n_imgs = scored[neighbor_pos]
+                    n_idx, n_kind, n_score, n_block, n_imgs, _n_ts = scored[neighbor_pos]
                     if n_kind == "text":
                         keep.add(n_idx)
 
@@ -1204,7 +1279,7 @@ def extract_interleaved_content(
     budget_keep, total = set(), 0
     image_count = 0
     max_images = 20
-    for idx, kind, score, block, imgs in by_score:
+    for idx, kind, score, block, imgs, _ts in by_score:
         if idx not in keep:
             continue
         if kind == "image":
@@ -1218,11 +1293,49 @@ def extract_interleaved_content(
         budget_keep.add(idx)
         total += len(block)
 
+    # --- Recency reserve for SE-family sources ---
+    # Allow the top-N most-recently-posted text blocks that scored > 0
+    # (but got cut by the character budget) to survive, so a fresh
+    # 0-vote comment isn't automatically buried under an old high-vote one.
+    # Scoped to SE sources (where votes_map is populated).
+    max_recency_reserve = 3
+    if votes_map and max_recency_reserve:
+        recency_candidates = []
+        for idx, kind, score, block, imgs, ts in scored:
+            if idx in budget_keep or kind != "text" or score <= 0:
+                continue
+            if ts is not None:
+                recency_candidates.append((idx, score, ts, block))
+        recency_candidates.sort(key=lambda x: x[2], reverse=True)
+        reserved = []
+        for idx, score, ts, block in recency_candidates[:max_recency_reserve]:
+            budget_keep.add(idx)
+            total += len(block)
+            reserved.append((idx, block))
+        # Groq reasonableness gate on reserved blocks (skip on failure)
+        if reserved and groq_api_key:
+            items = [b for _, b in reserved]
+            system = (
+                "You are filtering Stack Exchange comments/answers for an "
+                "electronics design research tool. Mark each as reasonable "
+                "(true) if it is on-topic, coherent, and substantive -- "
+                "or false if it is spam, meme, pure-social fluff "
+                "(\"thanks!\", \"lol\", \"+1\"), or a near-duplicate of "
+                "another comment. Respond ONLY with a JSON array: "
+                "[{\"index\": int, \"reasonable\": bool}, ...]"
+            )
+            reasonable = _groq_reasonableness_batch(
+                items, system, api_key=groq_api_key,
+            )
+            for i, (idx, _block) in enumerate(reserved):
+                if i not in reasonable:
+                    budget_keep.discard(idx)
+
     final_indices = sorted(budget_keep)
     kept_blocks = [blocks[i] for i in final_indices]
     kept_images = [
         img
-        for idx, kind, score, block, imgs in scored
+        for idx, kind, score, block, imgs, _ts in scored
         if idx in budget_keep and kind == "image"
         for img in imgs
     ]
@@ -1337,7 +1450,8 @@ def extract_circuit_entries(source: "Source") -> List[Dict]:
     return entries
 
 
-def build_circuit_gallery(corpus: "ResearchCorpus") -> List[Dict]:
+def build_circuit_gallery(corpus: "ResearchCorpus",
+                          groq_api_key: Optional[str] = None) -> List[Dict]:
     """Run extract_circuit_entries() across every successfully-scraped
     source in the corpus and return one flat, ordered list -- the full
     data set behind the 'Circuits & Schematics' tab."""
@@ -1346,6 +1460,7 @@ def build_circuit_gallery(corpus: "ResearchCorpus") -> List[Dict]:
     for s in corpus.sources:
         if s.error:
             continue
+        source_entries = []
         for entry in extract_circuit_entries(s):
             # Safety-net dedup: drop exact (image_url, context_before,
             # context_after) duplicates regardless of upstream root cause.
@@ -1364,7 +1479,35 @@ def build_circuit_gallery(corpus: "ResearchCorpus") -> List[Dict]:
             # unrelated teasers) before they reach the UI.
             if entry["relevance_score"] <= 0:
                 continue
-            gallery.append(entry)
+            source_entries.append(entry)
+
+        # Groq reasonableness gate: ask whether each entry's context
+        # actually describes the image, vs. adjacent-but-unrelated text.
+        # Skipped entirely when no API key or on failure.
+        if source_entries and groq_api_key:
+            items = [
+                f"alt: {e['alt']}\nbefore: {e['context_before']}\nafter: {e['context_after']}"
+                for e in source_entries
+            ]
+            system = (
+                "You are validating circuit-schematic image cards for an "
+                "electronics design research tool. Each card has an image "
+                "alt text and surrounding context text. Mark a card as "
+                "reasonable (true) if the context actually, sensibly "
+                "describes or relates to the image (e.g. a schematic with "
+                "accompanying caption text). Mark false if the context is "
+                "adjacent-but-unrelated text that happened to sit next to "
+                "the image, or if the image is decorative / the context is "
+                "noise. Respond ONLY with a JSON array: "
+                "[{\"index\": int, \"reasonable\": bool}, ...]"
+            )
+            reasonable = _groq_reasonableness_batch(
+                items, system, api_key=groq_api_key,
+            )
+            source_entries = [
+                e for i, e in enumerate(source_entries) if i in reasonable
+            ]
+        gallery.extend(source_entries)
     return gallery
 
 
@@ -1494,10 +1637,12 @@ def _fix_latex_math(markdown: str) -> str:
 
 def _parse_se_votes(html: str) -> Dict[str, Dict]:
     """
-    Parse vote counts and accepted-answer status from Stack Exchange HTML.
+    Parse vote counts, accepted-answer status, and timestamps from
+    Stack Exchange HTML.
 
     Returns a dict mapping a text fingerprint (first ~120 chars of the
-    answer/comment body, normalised) to {"votes": int, "accepted": bool}.
+    answer/comment body, normalised) to
+    {"votes": int, "accepted": bool, "timestamp": Optional[datetime]}.
 
     Uses BeautifulSoup selectors when available, falls back to text-based
     regex extraction if BS4 isn't installed or selectors fail.
@@ -1506,6 +1651,22 @@ def _parse_se_votes(html: str) -> Dict[str, Dict]:
         return {}
 
     votes_map: Dict[str, Dict] = {}
+
+    def _parse_ts(el) -> Optional[datetime]:
+        """Extract ISO-8601 timestamp from a <span class="relativetime">."""
+        ts_el = el.select_one("span.relativetime")
+        if ts_el is None:
+            ts_el = el.select_one('[class*="relativetime"]')
+        if ts_el is None:
+            return None
+        raw = ts_el.get("title", "")
+        if not raw:
+            return None
+        try:
+            raw = raw.replace("Z", "+00:00")
+            return datetime.fromisoformat(raw)
+        except (ValueError, AttributeError):
+            return None
 
     if _HAS_BS4:
         try:
@@ -1539,6 +1700,7 @@ def _parse_se_votes(html: str) -> Dict[str, Dict]:
                 votes_map[fingerprint] = {
                     "votes": vote_count,
                     "accepted": is_accepted,
+                    "timestamp": _parse_ts(ans),
                 }
 
             # Comments — less critical but still useful signals
@@ -1559,6 +1721,7 @@ def _parse_se_votes(html: str) -> Dict[str, Dict]:
                 votes_map[fingerprint] = {
                     "votes": vote_count,
                     "accepted": False,
+                    "timestamp": _parse_ts(cm),
                 }
             return votes_map
         except Exception:
@@ -1581,15 +1744,20 @@ def _parse_se_votes(html: str) -> Dict[str, Dict]:
         fingerprint = body_text[:120].lower()
         vote_count = int(nums[0]) if nums else 0
         is_accepted = "accepted" in block[:200].lower()
-        votes_map[fingerprint] = {"votes": vote_count, "accepted": is_accepted}
+        votes_map[fingerprint] = {
+            "votes": vote_count,
+            "accepted": is_accepted,
+            "timestamp": None,
+        }
 
     return votes_map
 
 
 def _match_block_to_vote(block_text: str, votes_map: Dict[str, Dict]) -> Dict:
     """Find the best matching vote entry for a markdown text block."""
+    _empty = {"votes": 0, "accepted": False, "timestamp": None}
     if not votes_map:
-        return {"votes": 0, "accepted": False}
+        return _empty
     text_lower = block_text.lower()[:120]
     # Direct prefix match
     for fp, info in votes_map.items():
@@ -1606,7 +1774,7 @@ def _match_block_to_vote(block_text: str, votes_map: Dict[str, Dict]) -> Dict:
         if overlap > best_overlap and overlap > 0.5:
             best_overlap = overlap
             best_match = info
-    return best_match or {"votes": 0, "accepted": False}
+    return best_match or _empty
 
 
 # -- Per-domain expand actions for Firecrawl --------------------------------

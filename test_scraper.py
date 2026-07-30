@@ -8,6 +8,7 @@ Run:  FIRECRAWL_API_KEY=... python3 test_scraper.py
 import os
 import sys
 import re
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from scraper import (
@@ -22,6 +23,7 @@ from scraper import (
     _score_image,
     _NOISE_LINE_RE,
     _normalize_image_url,
+    _groq_reasonableness_batch,
     generate_search_queries,
     JUNK_IMAGE_KEYWORDS,
     extract_circuit_entries,
@@ -393,6 +395,146 @@ check("Tracking params stripped",
       _normalize_image_url("https://example.com/img.jpg?v=123&t=abc") ==
       "https://example.com/img.jpg")
 
+# -- Timestamp parsing in _parse_se_votes --
+from datetime import datetime, timezone
+from unittest.mock import patch
+
+se_html_with_ts = """
+<html><body>
+<div class="answer">
+  <div class="js-vote-count">5</div>
+  <span class="relativetime" title="2025-03-15T10:30:00Z">2 hours ago</span>
+  <div class="post-text"><p>The transformer polarity depends on the
+  winding direction and the dot convention used in the schematic diagram
+  for identifying the phase relationship.</p></div>
+</div>
+<div class="comment">
+  <span class="vote-count-post">2</span>
+  <span class="relativetime" title="2025-07-20T08:00:00Z">yesterday</span>
+  <div class="comment-text"><p>Great explanation, this helped me
+  understand the dot convention on transformers much better now.</p></div>
+</div>
+</body></html>
+"""
+votes = _parse_se_votes(se_html_with_ts)
+has_ts = any(v.get("timestamp") is not None for v in votes.values())
+check("_parse_se_votes extracts timestamps",
+      has_ts, f"votes: {votes}")
+# Verify the timestamp is a datetime object
+for fp, info in votes.items():
+    if info.get("timestamp"):
+        check("Timestamp is datetime instance",
+              isinstance(info["timestamp"], datetime))
+        break
+
+# -- _match_block_to_vote returns timestamp --
+test_votes_map = {
+    "the transformer polarity depends on": {
+        "votes": 5, "accepted": False,
+        "timestamp": datetime(2025, 3, 15, 10, 30, tzinfo=timezone.utc),
+    }
+}
+matched = _match_block_to_vote(
+    "The transformer polarity depends on the winding direction",
+    test_votes_map,
+)
+check("_match_block_to_vote returns timestamp",
+      matched.get("timestamp") is not None)
+check("_match_block_to_vote returns vote count",
+      matched.get("votes") == 5)
+
+# -- _block_text_score recency bonus --
+now = datetime.now(timezone.utc)
+fresh_ts = now  # just now
+old_ts = datetime(2024, 1, 1, tzinfo=timezone.utc)  # old
+score_fresh = _block_text_score("amplifier circuit design", [], [],
+                                timestamp=fresh_ts)
+score_old = _block_text_score("amplifier circuit design", [], [],
+                              timestamp=old_ts)
+score_none = _block_text_score("amplifier circuit design", [], [],
+                               timestamp=None)
+check("Recency bonus: fresh timestamp scores higher than no timestamp",
+      score_fresh > score_none,
+      f"fresh={score_fresh} none={score_none}")
+check("Recency bonus: old timestamp scores same as no timestamp",
+      score_old == score_none,
+      f"old={score_old} none={score_none}")
+
+# -- _block_text_score vote + recency combined --
+score_combined = _block_text_score("amplifier circuit design", [], [],
+                                   vote_count=50, timestamp=fresh_ts)
+score_vote_only = _block_text_score("amplifier circuit design", [], [],
+                                    vote_count=50, timestamp=None)
+check("Vote + recency combined >= vote only",
+      score_combined >= score_vote_only,
+      f"combined={score_combined} vote_only={score_vote_only}")
+
+# -- _groq_reasonableness_batch: no API key returns all indices --
+result = _groq_reasonableness_batch(["item a", "item b"], "test prompt",
+                                    api_key=None)
+check("_groq_reasonableness_batch with no key returns all",
+      result == {0, 1})
+
+# -- _groq_reasonableness_batch: empty items returns empty set --
+result = _groq_reasonableness_batch([], "test prompt", api_key="fake")
+check("_groq_reasonableness_batch with empty items returns empty set",
+      result == set())
+
+# -- Mocked Groq: spam/joke dropped, legit kept --
+def _mock_resp(content):
+    """Build a mock requests.Response with the given JSON content."""
+    r = MagicMock()
+    r.json.return_value = {"choices": [{"message": {"content": content}}]}
+    r.raise_for_status.return_value = None
+    return r
+
+mock_items = [
+    "lol thanks!",  # spam/social -> false
+    "Use a 100nF cap between VCC and GND for decoupling",  # legit -> true
+    "Nice post bro!!!",  # social -> false
+]
+with patch("scraper.requests.post",
+           return_value=_mock_resp(
+               '[{"index": 0, "reasonable": false}, '
+               '{"index": 1, "reasonable": true}, '
+               '{"index": 2, "reasonable": false}]'
+           )):
+    result = _groq_reasonableness_batch(
+        mock_items, "test system prompt", api_key="fake-key",
+    )
+check("Mocked Groq: spam dropped, legit kept",
+      result == {1},
+      f"result: {result}")
+
+# -- Mocked Groq: error returns all indices (graceful degrade) --
+with patch("scraper.requests.post", side_effect=Exception("timeout")):
+    result = _groq_reasonableness_batch(
+        mock_items, "test prompt", api_key="fake-key",
+    )
+check("Mocked Groq: error returns all indices",
+      result == {0, 1, 2})
+
+# -- Mocked Groq for image context: spam context dropped --
+mock_img_entries = [
+    {"alt": "LM386 schematic", "context_before": "The LM386 amplifier circuit",
+     "context_after": "shows the gain configuration"},
+    {"alt": "loading.gif", "context_before": "Follow us on social media",
+     "context_after": "for more updates"},
+]
+with patch("scraper.requests.post",
+           return_value=_mock_resp(
+               '[{"index": 0, "reasonable": true}, '
+               '{"index": 1, "reasonable": false}]'
+           )):
+    result = _groq_reasonableness_batch(
+        [f"alt: {e['alt']}\nbefore: {e['context_before']}\nafter: {e['context_after']}"
+         for e in mock_img_entries],
+        "test image context prompt", api_key="fake-key",
+    )
+check("Mocked Groq image context: unrelated context dropped",
+      result == {0},
+      f"result: {result}")
+
 print("  (unit tests complete)")
 
 # ---------------------------------------------------------------------------
@@ -419,6 +561,90 @@ check("SE scrape completed with vote parsing (no crash)", True)
 check("No forum noise lines in output",
       "sign in" not in src.markdown.lower().split("consider")[0]
       if "consider" in src.markdown.lower() else True)
+
+# -- Recency reserve: recent-but-low-vote comment survives budget trim --
+# Simulate a tight budget where a high-vote old answer eats most of it,
+# but a fresh 0-vote comment should survive via the recency reserve.
+old_ts = datetime(2024, 1, 1, tzinfo=timezone.utc)
+fresh_ts = datetime.now(timezone.utc)
+
+mock_votes = {
+    "the old high-vote answer with lots of technical detail about "
+    "transformers and polarity and winding direction and dot convention "
+    "and magnetic coupling and core saturation": {
+        "votes": 100, "accepted": False, "timestamp": old_ts,
+    },
+    "the fresh comment about a real quick tip for checking polarity "
+    "with a multimeter on the continuity setting right now today": {
+        "votes": 0, "accepted": False, "timestamp": fresh_ts,
+    },
+}
+# Build markdown that will fill the budget with the old answer first,
+# then the fresh comment should still appear via recency reserve.
+mock_md = (
+    "# Transformer polarity\n\n"
+    "The old high-vote answer with lots of technical detail about "
+    "transformers and polarity and winding direction and dot convention "
+    "and magnetic coupling and core saturation and inrush current "
+    "limiting and secondary voltage regulation. " * 3 + "\n\n"
+    "The fresh comment about a real quick tip for checking polarity "
+    "with a multimeter on the continuity setting right now today "
+    "shows that recent practical advice matters too. " * 3 + "\n\n"
+    "Another old answer about transformer polarity dot convention "
+    "winding direction magnetic coupling core saturation. " * 3 + "\n"
+)
+# With a very tight budget, the fresh comment might get trimmed by
+# score-only sorting, but recency reserve should keep it.
+content, _ = extract_interleaved_content(
+    mock_md, "transformer polarity",
+    max_chars=1500,  # tight budget
+    votes_map=mock_votes,
+)
+check("Recency reserve: fresh comment survives tight budget",
+      "continuity setting" in content.lower() or
+      "multimeter" in content.lower() or
+      "fresh comment" in content.lower(),
+      f"content length: {len(content)}, snippet: {content[:200]}")
+
+# -- Mocked Groq gate on SE recency reserve --
+# Fresh comment that passes Groq should survive; spam should be dropped.
+mock_votes_2 = {
+    "thanks for the great answer this really helped me a lot": {
+        "votes": 0, "accepted": False, "timestamp": fresh_ts,
+    },
+    "use a 100nf ceramic cap between vcc and gnd as close to the ic "
+    "pins as possible for stable operation": {
+        "votes": 0, "accepted": False, "timestamp": fresh_ts,
+    },
+}
+mock_md_2 = (
+    "# LM386 decoupling\n\n"
+    "Thanks for the great answer this really helped me a lot with my "
+    "project and I really appreciate the detailed explanation you "
+    "provided for the capacitor selection criteria. " * 3 + "\n\n"
+    "Use a 100nf ceramic cap between vcc and gnd as close to the ic "
+    "pins as possible for stable operation and reduced noise on the "
+    "power supply rails of the amplifier circuit. " * 3 + "\n"
+)
+# Mock Groq to approve the technical comment, reject the social one
+with patch("scraper.requests.post",
+           return_value=_mock_resp(
+               '[{"index": 0, "reasonable": false}, '
+               '{"index": 1, "reasonable": true}]'
+           )):
+    content_2, _ = extract_interleaved_content(
+        mock_md_2, "LM386 decoupling",
+        max_chars=800,
+        votes_map=mock_votes_2,
+        groq_api_key="fake-key",
+    )
+check("Groq gate on recency reserve: spam dropped",
+      "thanks for the great answer" not in content_2.lower() or
+      "100nf ceramic" in content_2.lower(),
+      f"content: {content_2[:300]}")
+check("Groq gate on recency reserve: legit comment kept",
+      "100nf" in content_2 or "ceramic cap" in content_2.lower(),
+      f"content: {content_2[:300]}")
 
 # ---------------------------------------------------------------------------
 # 2. DigiKey — Product Information API (if subscribed) or graceful fallback
