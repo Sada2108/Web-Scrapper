@@ -131,6 +131,8 @@ EXCLUDED_DOMAINS = [
     "ebay.com", "ebay.co.uk", "ebay.de", "ebay.fr",
     "aliexpress.com", "aliexpress.us",
     "alibaba.com",
+    # Video platforms: no scrapable text content worth extracting.
+    "youtube.com", "youtu.be", "youtube-nocookie.com", "vimeo.com",
 ]
 
 # A lightweight EE vocabulary used to pull technical terms out of the prompt
@@ -845,7 +847,8 @@ class FirecrawlResearcher:
                 elif r.get("error"):
                     search_errors.append(f"Search '{q}': {r['error']}")
 
-        # Hard-exclude e-commerce / shopping domains before ranking.
+        # Hard-exclude blocked domains (e-commerce, video platforms, etc.)
+        # before ranking.
         before = len(candidates)
         candidates = [
             c for c in candidates
@@ -855,7 +858,7 @@ class FirecrawlResearcher:
             )
         ]
         if before - len(candidates) > 0:
-            print(f"  [filter] excluded {before - len(candidates)} e-commerce URLs")
+            print(f"  [filter] excluded {before - len(candidates)} blocked URLs")
 
         candidates = _dedupe_and_rank(
             candidates,
