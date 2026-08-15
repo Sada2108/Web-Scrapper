@@ -1,3 +1,4 @@
+from urllib.parse import urljoin
 from playwright.sync_api import sync_playwright
 import re
 
@@ -9,6 +10,12 @@ from config import (
 
 
 class KiCadCrawler:
+    """
+    Crawler for forum.kicad.info (Discourse). Also works for any other
+    Discourse-based forum by pointing it at a different base URL - the
+    markup (article posts, .cooked bodies, .creator authors, /t/ topic
+    URLs) is standard across Discourse installs.
+    """
 
     def __init__(self, logger):
         self.logger = logger
@@ -16,6 +23,7 @@ class KiCadCrawler:
         self.browser = None
         self.page = None
         self._popups_dismissed = False  # only need to do this once per session
+        self.base_url = None
 
     # --------------------------------------------------
 
@@ -53,6 +61,11 @@ class KiCadCrawler:
 
         self.logger.info(f"Opening {url}")
 
+        if not self.base_url:
+            m = re.match(r"(https?://[^/]+)", url)
+            if m:
+                self.base_url = m.group(1)
+
         self.page.goto(
             url,
             wait_until="domcontentloaded",
@@ -67,6 +80,29 @@ class KiCadCrawler:
             self.page.wait_for_load_state("networkidle", timeout=1500)
         except Exception:
             pass
+
+        self._check_bot_challenge(url)
+
+    def _check_bot_challenge(self, url):
+        """
+        We don't attempt to solve or bypass Cloudflare-style bot
+        challenges - that's a deliberate anti-automation measure, not a
+        bug. Detect it and fail loudly instead of silently returning
+        zero results.
+        """
+        title = ""
+        try:
+            title = self.page.title()
+        except Exception:
+            pass
+
+        challenge_titles = ("just a moment", "attention required")
+        if any(t in title.lower() for t in challenge_titles):
+            raise Exception(
+                f"'{url}' is behind a Cloudflare bot-detection challenge "
+                f"(page title: {title!r}). This forum can't be scraped "
+                f"automatically - it needs to be browsed manually."
+            )
 
     def _scroll_page(self, max_iterations=8):
         """Scroll until content stops growing, instead of always
@@ -117,7 +153,8 @@ class KiCadCrawler:
         self._popups_dismissed = True
 
     # --------------------------------------------------
-    # Open a Discourse Thread
+    # Open a Discourse category/index page OR a single topic,
+    # and collect topic links from it (up to max_posts).
     # --------------------------------------------------
 
     def open_subreddit_and_collect_post_links(
@@ -127,7 +164,7 @@ class KiCadCrawler:
     ):
 
         self.logger.info(
-            f"Opening Discourse thread: {subreddit_url}"
+            f"Opening Discourse page: {subreddit_url}"
         )
 
         self._safe_goto(subreddit_url)
@@ -138,13 +175,46 @@ class KiCadCrawler:
 
         html = self.page.content()
 
-        # User already enters a thread URL.
-        # So we simply return that one URL.
+        # A direct topic URL (e.g. https://forum.kicad.info/t/some-topic/123)
+        # is a single thread - scrape just that one, same as before.
+        if "/t/" in subreddit_url:
+            self.logger.info("URL already points at a single topic.")
+            return html, [subreddit_url]
 
-        links = [subreddit_url]
+        # Otherwise this is a category/latest/top index page listing many
+        # topics - walk the topic list and collect real thread links,
+        # the same way the Reddit crawler collects /comments/ links.
+        links = []
+        seen = set()
+
+        anchors = self.page.locator("a.title, a.raw-topic-link")
+        count = anchors.count()
+
+        for i in range(count):
+            try:
+                href = anchors.nth(i).get_attribute("href")
+                if not href:
+                    continue
+
+                full_url = urljoin(self.base_url + "/", href)
+                full_url = full_url.split("?")[0].split("#")[0].rstrip("/")
+
+                if "/t/" not in full_url:
+                    continue
+
+                if full_url in seen:
+                    continue
+
+                seen.add(full_url)
+                links.append(full_url)
+
+                if len(links) >= max_posts:
+                    break
+            except Exception:
+                continue
 
         self.logger.info(
-            "Thread loaded successfully."
+            f"Collected {len(links)} topic link(s) from Discourse index."
         )
 
         return html, links
@@ -226,7 +296,7 @@ class KiCadCrawler:
 
         first = posts.nth(0)
 
-        author = self._safe_text(first.locator(".creator a"), "Unknown")
+        author = self._safe_text(first.locator(".topic-meta-data .names a"), "Unknown")
         content = self._safe_text(first.locator(".cooked"))
 
         meta = {
@@ -255,10 +325,23 @@ class KiCadCrawler:
 
             post = posts.nth(i)
 
-            reply_author = self._safe_text(post.locator(".creator a"), "Unknown")
+            # Discourse virtualizes the post stream: articles not yet
+            # scrolled into view are "cloaked" placeholders with no
+            # rendered content. Scroll each one into view before reading
+            # it, otherwise most replies come back empty and get dropped.
+            try:
+                post.scroll_into_view_if_needed(timeout=2000)
+                post.locator(".cooked").first.wait_for(state="attached", timeout=2000)
+            except Exception:
+                pass
+
+            reply_author = self._safe_text(post.locator(".topic-meta-data .names a"), "Unknown")
             reply_body = self._safe_text(post.locator(".cooked"))
             likes = self._safe_text(post.locator(".like-count"))
             date = self._safe_attribute(post.locator("time"), "datetime")
+
+            if not reply_body:
+                continue
 
             raw_comments.append({
 
@@ -315,77 +398,3 @@ class KiCadCrawler:
 
         except Exception:
             return default
-
-    # --------------------------------------------------
-
-    def _get_post_content(self, post):
-
-        selectors = [
-            ".cooked",
-            ".regular",
-            ".post",
-            ".topic-body"
-        ]
-
-        for selector in selectors:
-
-            try:
-                locator = post.locator(selector)
-
-                if locator.count():
-                    text = locator.first.inner_text().strip()
-
-                    if text:
-                        return text
-
-            except:
-                pass
-
-        return ""
-
-    # --------------------------------------------------
-
-    def _get_author(self, post):
-
-        selectors = [
-            ".creator a",
-            ".username",
-            ".names .username",
-            "a[data-user-card]"
-        ]
-
-        for selector in selectors:
-
-            try:
-                locator = post.locator(selector)
-
-                if locator.count():
-                    return locator.first.inner_text().strip()
-
-            except:
-                pass
-
-        return "Unknown"
-
-    # --------------------------------------------------
-
-    def _get_like_count(self, post):
-
-        selectors = [
-            ".like-count",
-            ".actions .like-count",
-            ".post-action-menu__like-count"
-        ]
-
-        for selector in selectors:
-
-            try:
-                locator = post.locator(selector)
-
-                if locator.count():
-                    return locator.first.inner_text().strip()
-
-            except:
-                pass
-
-        return ""

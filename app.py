@@ -15,7 +15,7 @@ from pathlib import Path
 import streamlit as st
 
 from config import (
-    DEFAULT_SUBREDDIT_URL,
+    FORUMS,
     JSON_OUTPUT,
     CSV_OUTPUT,
     FEED_HTML_OUTPUT,
@@ -23,8 +23,7 @@ from config import (
     SCREENSHOT_DIR,
     MAX_POSTS,
 )
-from crawler import RedditCrawler
-from kicad_crawler import KiCadCrawler
+from crawler_factory import build_crawler
 from extractor import RedditExtractor
 from exporter import RedditExporter
 from utils import setup_logger
@@ -175,7 +174,7 @@ hr {
 st.markdown(CSS, unsafe_allow_html=True)
 
 
-def hero(source_label: str = "REDDIT + KICAD"):
+def hero(source_label: str = "MULTI-FORUM"):
     """Signature element: two source traces converging on one scrape node."""
     st.markdown(
         f"""
@@ -217,18 +216,19 @@ with st.sidebar:
     st.markdown('<div class="panel-title">⌁ CONTROL PANEL</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="panel-eyebrow">Source</div>', unsafe_allow_html=True)
-    forum = st.radio(
+    forum = st.selectbox(
         "Forum",
-        ["Reddit", "KiCad"],
-        horizontal=True,
+        list(FORUMS.keys()),
         label_visibility="collapsed",
     )
+    forum_config = FORUMS[forum]
 
     st.markdown('<div class="panel-eyebrow">Target URL</div>', unsafe_allow_html=True)
-    default_url = DEFAULT_SUBREDDIT_URL if forum == "Reddit" else "https://forum.kicad.info"
+    default_url = forum_config["default_url"]
     target_url = st.text_input(
         "Target URL",
         value=default_url,
+        placeholder="Paste a forum, category, or thread URL" if not default_url else None,
         label_visibility="collapsed",
     )
 
@@ -281,13 +281,16 @@ def get_comments(post):
 # Run scrape
 # ============================================================
 
-if run_clicked:
+if run_clicked and not target_url.strip():
+    st.session_state.error = "Please enter a URL for this forum."
+
+elif run_clicked:
     st.session_state.posts = []
     st.session_state.error = None
     start_time = time.time()
 
     logger = setup_logger(LOG_FILE)
-    crawler = RedditCrawler(logger) if forum == "Reddit" else KiCadCrawler(logger)
+    crawler = build_crawler(forum_config["platform"], logger)
     extractor = RedditExtractor(logger)
     exporter = RedditExporter(logger)
 

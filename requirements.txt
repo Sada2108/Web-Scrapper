@@ -2,3 +2,4 @@ playwright
 beautifulsoup4
 lxml
 pandas
+streamlit

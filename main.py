@@ -1,7 +1,7 @@
 import argparse
 
 from config import (
-    DEFAULT_SUBREDDIT_URL,
+    FORUMS,
     JSON_OUTPUT,
     CSV_OUTPUT,
     FEED_HTML_OUTPUT,
@@ -10,8 +10,7 @@ from config import (
     MAX_POSTS
 )
 
-from crawler import RedditCrawler
-from kicad_crawler import KiCadCrawler
+from crawler_factory import build_crawler
 
 from extractor import RedditExtractor
 from exporter import RedditExporter
@@ -32,37 +31,43 @@ def main():
     # -----------------------------------------------------
     # Forum Selection
     # -----------------------------------------------------
+    forum_names = list(FORUMS.keys())
+
     print("\nChoose Forum")
-    print("1. Reddit")
-    print("2. KiCad")
+    for i, name in enumerate(forum_names, start=1):
+        print(f"{i}. {name}")
 
     choice = input("\nEnter your choice: ").strip()
 
-    if choice == "1":
-
-        print("\nReddit Selected")
-
-        user_url = input(
-            f"\nEnter Reddit Subreddit URL\n(Default: {DEFAULT_SUBREDDIT_URL})\n> "
-        ).strip()
-
-        if not user_url:
-            user_url = DEFAULT_SUBREDDIT_URL
-
-    elif choice == "2":
-
-        print("\nKiCad Selected")
-
-        user_url = input(
-            "\nEnter KiCad Thread URL\n(Default: https://forum.kicad.info)\n> "
-        ).strip()
-
-        if not user_url:
-            user_url = "https://forum.kicad.info"
-
-    else:
+    try:
+        choice_idx = int(choice) - 1
+        if choice_idx < 0 or choice_idx >= len(forum_names):
+            raise ValueError
+    except ValueError:
         print("Invalid Choice")
         return
+
+    forum_name = forum_names[choice_idx]
+    forum_config = FORUMS[forum_name]
+
+    print(f"\n{forum_name} Selected")
+
+    default_url = forum_config["default_url"]
+    prompt_label = "Enter forum/thread URL"
+    if default_url:
+        user_url = input(
+            f"\n{prompt_label}\n(Default: {default_url})\n> "
+        ).strip()
+        if not user_url:
+            user_url = default_url
+    else:
+        # Forums with no sensible default (e.g. "Other XenForo forum")
+        # require the user to supply a URL.
+        user_url = ""
+        while not user_url:
+            user_url = input(f"\n{prompt_label}\n> ").strip()
+            if not user_url:
+                print("A URL is required for this forum.")
 
     # -----------------------------------------------------
     # Maximum Posts
@@ -93,12 +98,9 @@ def main():
     logger.info("=== Electronics Forum Scraper Started ===")
 
     # -----------------------------------------------------
-    # Choose crawler
+    # Choose crawler based on the forum's platform
     # -----------------------------------------------------
-    if choice == "1":
-        crawler = RedditCrawler(logger)
-    else:
-        crawler = KiCadCrawler(logger)
+    crawler = build_crawler(forum_config["platform"], logger)
 
     extractor = RedditExtractor(logger)
     exporter = RedditExporter(logger)

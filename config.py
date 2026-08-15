@@ -31,3 +31,43 @@ USER_AGENT = (
 )
 
 DEFAULT_SUBREDDIT_URL = "https://www.reddit.com/r/MachineLearning/"
+
+# ============================================================
+# Forum registry
+#
+# Every entry maps a human-readable forum name to the crawler class
+# that handles its platform ("platform") and a sensible default URL.
+# To add another forum:
+#   - if it runs Discourse  -> platform="discourse", reuse KiCadCrawler
+#   - if it runs XenForo    -> platform="xenforo",  reuse XenForoCrawler
+#   - otherwise             -> write a new crawler and register it here
+# app.py / main.py both read this list, so nothing else needs to change
+# to make a new forum selectable.
+# ============================================================
+
+FORUMS = {
+    "Reddit": {
+        "platform": "reddit",
+        "default_url": DEFAULT_SUBREDDIT_URL,
+    },
+    "KiCad Forum": {
+        "platform": "discourse",
+        "default_url": "https://forum.kicad.info/latest",
+    },
+    "All About Circuits": {
+        "platform": "xenforo",
+        "default_url": "https://forum.allaboutcircuits.com/forums/general-electronics-chat.5/",
+    },
+    "Electrical Engineering Forum": {
+        "platform": "xenforo",
+        "default_url": "https://electricalengineering.forum/",
+    },
+    "Electronics-Lab.com (PCB Layout & Design)": {
+        "platform": "xenforo",
+        "default_url": "https://www.electronics-lab.com/forums/forums/pcb-layout-design-and-manufacture.186/",
+    },
+    "Other XenForo forum (custom URL)": {
+        "platform": "xenforo",
+        "default_url": "",
+    },
+}
