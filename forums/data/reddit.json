@@ -1,0 +1,109 @@
+[
+  {
+    "title": "[D] Self-Promotion Thread",
+    "author": "ClickUp_App",
+    "subreddit": "Discussion",
+    "upvotes": null,
+    "comments_count": "3",
+    "post_url": "https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread",
+    "content": "Please post your personal projects, startups, product placements, collaboration needs, blogs etc.\nPlease mention the payment and pricing requirements for products and services.\nPlease do not post link shorteners, link aggregator websites , or auto-subscribe links.\nAny abuse of trust will lead to bans.\nEncourage others who create new posts for questions to post here instead!\nThread will stay alive until next one so keep posting after the date in the title.\nMeta: This is an experiment. If the community doesnt like this, we will cancel it. This is to encourage those in the community to promote their work by not spamming the main threads.\nI've been working on AI infrastructure for medical research at AIPOCH, and wanted to share a few things we've released recently.",
+    "scraped_from": "https://www.reddit.com/r/MachineLearning/comments/1ul5bgf/d_selfpromotion_thread",
+    "comments": [
+      {
+        "author": "ClickUp_App",
+        "body": "ClickUp_App • Promoted",
+        "score": null,
+        "depth": 0,
+        "replies": []
+      },
+      {
+        "author": "u/pearsonofficial",
+        "body": "u/pearsonofficial • Promoted Your skills define the score​. Choose PTE for Fairness. Book Now pearsonpte.com Collapse video player",
+        "score": null,
+        "depth": 0,
+        "replies": []
+      },
+      {
+        "author": "u/pearsonofficial",
+        "body": "u/pearsonofficial • Promoted",
+        "score": null,
+        "depth": 0,
+        "replies": []
+      }
+    ]
+  },
+  {
+    "title": "[D] Monthly Who's Hiring and Who wants to be Hired?",
+    "author": "CometML",
+    "subreddit": "Discussion",
+    "upvotes": null,
+    "comments_count": "3",
+    "post_url": "https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired",
+    "content": "For Job Postings please use this template\nHiring: [Location], Salary:[], [Remote | Relocation], [Full Time | Contract | Part Time] and [Brief overview, what you're looking for]\nFor Those looking for jobs please use this template\nWant to be Hired: [Location], Salary Expectation:[], [Remote | Relocation], [Full Time | Contract | Part Time] Resume: [Link to resume] and [Brief overview, what you're looking for]\nPlease remember that this community is geared towards those with experience.\nWant to be Hired: Taiwan, Salary Expectation: Any paid opportunity, Remote, Full Time\nI am an engineer with experience building projects in machine learning, NLP, and backend development. I am looking for full time remote opportunities in AI/ML engineering(or RD), AGI scientist, robot engineering. Please take a look at my projects in my LinkedIn in my resume. Thank you very much.\nWant to be Hired: Chennai, Salary Expectation: Any paid opportunity, Remote, Part Time resume",
+    "scraped_from": "https://www.reddit.com/r/MachineLearning/comments/1uk949b/d_monthly_whos_hiring_and_who_wants_to_be_hired",
+    "comments": [
+      {
+        "author": "pearsonofficial",
+        "body": "pearsonofficial • Promoted Your skills define the score​. Choose PTE for Fairness. pearsonpte.com Book Now",
+        "score": null,
+        "depth": 0,
+        "replies": []
+      },
+      {
+        "author": "pearsonofficial",
+        "body": "pearsonofficial • Promoted Your skills define the score​. Choose PTE for Fairness.",
+        "score": null,
+        "depth": 0,
+        "replies": []
+      },
+      {
+        "author": "pearsonofficial",
+        "body": "pearsonofficial • Promoted",
+        "score": null,
+        "depth": 0,
+        "replies": []
+      }
+    ]
+  },
+  {
+    "title": "Optimising LMAPF guidance graphs using Evolutionary algorithms: Advice needed [R]",
+    "author": "google",
+    "subreddit": "Project",
+    "upvotes": null,
+    "comments_count": "0",
+    "post_url": "https://www.reddit.com/r/MachineLearning/comments/1ufdzsr/optimising_lmapf_guidance_graphs_using",
+    "content": "I'm currently working on my dissertation and feel like I could really use some advice from someone who looks at the problem with fresh eyes. I appreciate all input.\nThe Problem: Multi Agent Path Finding is the problem of finding paths for several agents to their destinations. Lifelong MAPF is the same, but upon task completion an agent is assigned a new task. For my dissertation (and usually in research) agents move on a grid-like graph and time is discrete. Each timestep an agent can move to an adjacent tile or wait. A good LMAPF algorithm creates paths which maximise average jobs completed per timestep.\nSome LMAPF algorithms can also work on weighted graphs where each edge to an adjacent node (or itself) has its own cost. Such a graph is called guidance graph and the choice of edge weights can influence which paths the LMAPF algorithm creates also impacting throughput.\nMy supervisor wanted to explore whether Evolutionary algorithms can be suitable for finding a guidance graph that improves throughput without changing the underlying LMAPF algorithm. A guidance graph is scenario specific meaning it is optimised for a specific LMAPF algorithm, map, and agent count.\nMy algorithm so far: So far I've implemented a very basic evolutionary algorithm. An initial population of guidance graphs is randomly initialized (Limited to 10 at the moment). Then each candidate is plugged into the LMAPF algorithm for a certain amount of time steps and the completed jobs are counted to create that candidates fitness score. The top (2) candidates are selected and the rest are discarded. The top candidates are used to make a new set of candidates (no crossover). These step are repeated indefinitely.\nIssues I've has so far: The simulation can use a seed and is deterministic. The seed determines which nodes the jobs appear on. Using the same guidance graph but different seeds yields random fitness scores. The higher the simulation time the lower the coefficient of variation (standard deviation/mean). For 5000 steps the CV is 0.006. Using guidance graphs with the same parent graph and on different seeds should yield throughputs that have a much higher CV than 0.006 in order for the selection of the best candidates to be somewhat reliable. You could make the argument that given enough time statistically speaking the best candidate will tend towards a better guidance graph but if 9/10 of the candidates I create are worse than the best of the last generation then the solution will tend towards getting worse with each generation. It seems there are so many ingredients for a working evolutionary algorithm that I am missing: I need a mutation strategy that creates solutions with high enough amount of variation but that don't create better offspring once in a blue moon. Also simulating 5000 time steps takes roughly 30 seconds so 300 seconds for one tiny generation of 10 candidates. If my guidance graph is a 25x25 grid -> 625 tiles -> 3125 weights. If my mutation strategy changes 10 weights at a time it will take years to go through enough iterations to even tough every weight once. If the mutation strategy changes more than 10 weights at a time the change of good changes cancelling out bad ones increases.\nMutation strategies I've tried are:\nIterate through each weight. Each has a certain chance of getting mutated by a random amount.",
+    "scraped_from": "https://www.reddit.com/r/MachineLearning/comments/1ufdzsr/optimising_lmapf_guidance_graphs_using",
+    "comments": []
+  },
+  {
+    "title": "EMA on LoRA ? [R]",
+    "author": "google",
+    "subreddit": "Research",
+    "upvotes": null,
+    "comments_count": "0",
+    "post_url": "https://www.reddit.com/r/MachineLearning/comments/1ubv0f5/ema_on_lora_r",
+    "content": "Does anyone know of papers where EMA on LoRA adapters has been used successfully?\nIm interested in cases where the EMA adapter acts as a self-teacher generating soft labels for the trainable adapter.\nOn-policy self-distillation [1] uses ema for the teacher. However, they seem to fully fine-tune. Any empirical results showing the idea is working on lora/ left models?\n[1] https://arxiv.org/abs/2601.19897\nExponential Moving Average. Is used as an alternative to update the network weights.\nAnyone can view, post, and comment to this community\nJoin the most real place on the internet\nBy continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy .",
+    "scraped_from": "https://www.reddit.com/r/MachineLearning/comments/1ubv0f5/ema_on_lora_r",
+    "comments": []
+  },
+  {
+    "title": "Masked depth modeling with sensor-validity masking: reports best RMSE on 7 of 8 masked/sparse depth benchmarks, plus a controlled encoder-init study[R]",
+    "author": "AmazonWebServices",
+    "subreddit": "Research",
+    "upvotes": null,
+    "comments_count": "1",
+    "post_url": "https://www.reddit.com/r/MachineLearning/comments/1upqghy/masked_depth_modeling_with_sensorvalidity_masking",
+    "content": "The core idea in masked depth modeling is to treat the sensor's own missing regions as the masking signal rather than using random block dropout. Specular highlights, transparent surfaces, and textureless areas where RGB-D cameras return no valid depth become the natural training target. The model therefore learns on exactly the failure distribution it faces at inference. Robbyant, an embodied AI company under Ant Group, describes this framing in LingBot-Depth 2.0.\nVersion 2.0 changes nothing in the training recipe except the encoder initialization and data scale. The encoder-init study is the clean experiment here: same MDM pipeline, same data curation, only the pretrained backbone swapped. Per the paper, the LingBot-Vision init wins on nearly every benchmark at ViT-L and on most benchmarks at ViT-g, with one concession: DINOv2 keeps an edge on the Hammer captures. The gap widens with data scale rather than washing out, per their scaling figure. They report best RMSE on 7 of 8 block-mask and sparse benchmarks and 6 of 8 real camera configurations across three capture suites (Hammer D435/L515/ToF, ClearGrasp D415/D435, and their own D415/D435/D455 set). They report the strongest numbers on the transparent-object ClearGrasp captures, with block-masked DIODE-Indoor RMSE roughly halving versus the 1.0 release. The attached images are screenshots from their paper (Tables 6, 7, 8 and a qualitative mirror/glass point-cloud figure); interactive point-cloud demos live on the project page.\nDepth 2.0 weights are not released, so none of these completion numbers can be independently rerun. Only the four Vision backbones are open under Apache-2.0 and checkable at https://github.com/robbyant/lingbot-vision , which hosts the paper and the open weights. The renders shown come from the vendor's comparison page.\nDoes sensor-validity masking beat random masking for other sensing modalities, say lidar or thermal? That would test how general the framing really is.\nNobody's responded to this post yet. Add your thoughts and get the conversation going.\nAnyone can view, post, and comment to this community\nJoin the most real place on the internet\nBy continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy .",
+    "scraped_from": "https://www.reddit.com/r/MachineLearning/comments/1upqghy/masked_depth_modeling_with_sensorvalidity_masking",
+    "comments": [
+      {
+        "author": "AmazonWebServices",
+        "body": "AmazonWebServices • Promoted",
+        "score": null,
+        "depth": 0,
+        "replies": []
+      }
+    ]
+  }
+]
