@@ -97,6 +97,23 @@ SCHEMA_HINT_SUFFIXES = [
 
 ALL_HINT_SUFFIXES = SOURCE_HINT_SUFFIXES + SCHEMA_HINT_SUFFIXES
 
+# Suffix pool for PCB layout / manufacturing questions (clearance, creepage,
+# copper pour, thermal relief, etc.) -- used instead of ALL_HINT_SUFFIXES
+# when the prompt matches PCB_LAYOUT_KEYWORD_PATTERNS, so a layout question
+# doesn't get generic datasheet/BOM suffixes appended to it.
+LAYOUT_HINT_SUFFIXES = [
+    "PCB layout clearance recommendations",
+    "IPC-2221 trace clearance guidelines",
+    "footprint creepage spacing",
+    "copper pour clearance",
+    "via placement guidelines",
+    "thermal relief pattern",
+    "trace width and spacing",
+    "component placement guidelines",
+    "solder mask and silkscreen clearance",
+    "fabrication tolerance recommendations",
+]
+
 # When both a part number and a topic pattern match are found, this fraction
 # of queries uses the compound term (e.g. "LM386 audio amplifier"); the
 # remainder uses bare topic-pattern terms only as a breadth fallback.
@@ -155,6 +172,26 @@ EE_KEYWORD_PATTERNS = [
     r"class [A-D] amplifier", r"preamp(?:lifier)?",
     r"audio circuit", r"amplifier circuit",
 ]
+
+# PCB layout / manufacturing vocabulary -- clearance, spacing, and
+# fabrication concerns that are a completely different question shape from
+# "what is this chip" (datasheet/BOM/pinout). Kept as its own list so
+# generate_search_queries() can detect this intent and swap in
+# LAYOUT_HINT_SUFFIXES instead of ALL_HINT_SUFFIXES, and merged into
+# EE_KEYWORD_PATTERNS so the plain heuristic term extraction picks these up
+# too.
+PCB_LAYOUT_KEYWORD_PATTERNS = [
+    r"clearances?", r"creepage(?: distance)?", r"trace spacing",
+    r"trace width", r"copper pour", r"IPC[- ]?2221", r"IPC[- ]?2152",
+    r"thermal relief", r"via placement", r"via stitching",
+    r"footprint spacing", r"pad spacing", r"solder mask",
+    r"silkscreen clearance", r"annular ring", r"layer stack[- ]?up",
+    r"impedance matching", r"panelization", r"component placement",
+    r"fabrication tolerance", r"\bDFM\b", r"creepage and clearance",
+    r"high[- ]voltage isolation spacing", r"conformal coating",
+]
+
+EE_KEYWORD_PATTERNS = EE_KEYWORD_PATTERNS + PCB_LAYOUT_KEYWORD_PATTERNS
 
 # Generic part-number regex — matches IC part numbers like LM386, TL071,
 # OPA2340, MAX232, NE555 etc.  Case-insensitive so "lm386" matches as
@@ -256,13 +293,118 @@ class ResearchCorpus:
 # Step 1: prompt -> search queries
 # --------------------------------------------------------------------------
 
+QUERY_PLANNER_SYSTEM_PROMPT = (
+    "You are a search-query planner for an electronics/PCB design research "
+    "tool. Given a raw natural-language design prompt from an engineer, "
+    "first silently classify what KIND of question it is -- for example: "
+    "datasheet lookup, PCB layout/manufacturing (clearance, creepage, "
+    "trace spacing, copper pour, thermal relief, etc.), troubleshooting, "
+    "component comparison/selection, or theory-of-operation -- then "
+    "generate search-engine queries that fit THAT intent. Do not default "
+    "to generic 'datasheet' / 'bill of materials' / 'gain resistor values' "
+    "style queries unless the prompt is actually asking about those "
+    "things. If a part number appears in the prompt, incorporate it into "
+    "the queries where it's relevant, but every query should still reflect "
+    "what was actually asked. Respond ONLY with a JSON array of plain "
+    "query strings, no markdown fences, no keys, no commentary -- just "
+    "[\"query one\", \"query two\", ...]."
+)
+
+
+def _groq_generate_queries(
+    prompt: str,
+    max_queries: int,
+    api_key: Optional[str] = None,
+    timeout: int = 30,
+) -> Optional[List[str]]:
+    """
+    LLM-based query planner: asks Groq to classify the intent of the design
+    prompt (datasheet lookup vs PCB layout/manufacturing vs troubleshooting
+    vs comparison vs theory-of-operation, etc.) and produce queries that fit
+    that intent. Returns None on any failure (no key, network error, bad
+    JSON) so the caller can silently fall back to the heuristic path --
+    same pattern as _groq_reasonableness_batch().
+    """
+    api_key = api_key or os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        return None
+
+    user_prompt = (
+        f"Design prompt:\n{prompt}\n\n"
+        f"Generate exactly {max_queries} distinct, specific search-engine "
+        "queries (a handful of words each, no surrounding quotes) that "
+        "would surface the most useful technical sources for answering "
+        "this specific prompt."
+    )
+    try:
+        resp = requests.post(
+            f"{GROQ_API_BASE}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": GROQ_MODEL,
+                "messages": [
+                    {"role": "system", "content": QUERY_PLANNER_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.3,
+                "max_tokens": 600,
+            },
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        text = resp.json()["choices"][0]["message"]["content"]
+        m = re.search(r"\[.*\]", text, re.DOTALL)
+        if not m:
+            return None
+        parsed = json.loads(m.group())
+        queries = [q.strip() for q in parsed if isinstance(q, str) and q.strip()]
+        return queries[:max_queries] if queries else None
+    except Exception as e:
+        print(f"[query planner] Groq call failed, falling back to heuristic: {e}",
+              file=sys.stderr)
+        return None
+
+
 def generate_search_queries(prompt: str, max_queries: int = 6) -> List[str]:
+    """
+    Turn a free-text design prompt into targeted search queries.
+
+    Tries the LLM-based intent-aware planner first (_groq_generate_queries,
+    only runs if GROQ_API_KEY is set); on no key or any failure, falls back
+    to the heuristic keyword matcher (_heuristic_search_queries) so the tool
+    always works with zero LLM calls required.
+    """
+    llm_queries = _groq_generate_queries(prompt, max_queries)
+    if llm_queries:
+        print(f"[query planner] using Groq LLM path ({len(llm_queries)} queries)",
+              file=sys.stderr)
+        return llm_queries
+
+    print("[query planner] using heuristic fallback path", file=sys.stderr)
+    return _heuristic_search_queries(prompt, max_queries)
+
+
+def _heuristic_search_queries(prompt: str, max_queries: int = 6) -> List[str]:
     """
     Extract technical sub-topics from a free-text design prompt and turn
     them into targeted search queries. This is a heuristic keyword matcher
-    (no external LLM call required); swap in an LLM-based planner later if
-    you want richer query expansion.
+    (no external LLM call required) -- the fallback path used by
+    generate_search_queries() when no Groq key is configured or the LLM
+    call fails.
     """
+    # --- 0. Detect PCB layout/manufacturing intent so we don't append
+    # generic datasheet/BOM suffixes to a clearance/creepage/spacing
+    # question. ---
+    lower_prompt = prompt.lower()
+    is_layout_query = any(
+        re.search(pattern, lower_prompt, flags=re.IGNORECASE)
+        for pattern in PCB_LAYOUT_KEYWORD_PATTERNS
+    )
+    hint_suffixes = LAYOUT_HINT_SUFFIXES if is_layout_query else ALL_HINT_SUFFIXES
+
     # --- 1. Extract context terms (part numbers + EE patterns) ---
     # Uses the shared _extract_context_terms() so there's exactly ONE
     # part-number and EE-keyword extraction implementation in this file.
@@ -302,7 +444,7 @@ def generate_search_queries(prompt: str, max_queries: int = 6) -> List[str]:
     # generically without literally saying "LM386").  Bare part-number-only
     # queries are dropped when a compound is available — they're too
     # ambiguous on their own.
-    n_suffixes = len(ALL_HINT_SUFFIXES)
+    n_suffixes = len(hint_suffixes)
     if max_queries <= n_suffixes:
         step = n_suffixes / max_queries
         suffix_indices = [int(i * step) for i in range(max_queries)]
@@ -325,7 +467,7 @@ def generate_search_queries(prompt: str, max_queries: int = 6) -> List[str]:
             for _ in range(compound_quota):
                 if si >= len(suffix_indices):
                     break
-                suffix = ALL_HINT_SUFFIXES[suffix_indices[si]]
+                suffix = hint_suffixes[suffix_indices[si]]
                 queries.append(f"{compound} {suffix}")
                 si += 1
 
@@ -334,7 +476,7 @@ def generate_search_queries(prompt: str, max_queries: int = 6) -> List[str]:
                 for bt in breadth_terms:
                     if si >= len(suffix_indices) or len(queries) >= max_queries:
                         break
-                    suffix = ALL_HINT_SUFFIXES[suffix_indices[si]]
+                    suffix = hint_suffixes[suffix_indices[si]]
                     queries.append(f"{bt} {suffix}")
                     si += 1
         else:
@@ -352,7 +494,7 @@ def generate_search_queries(prompt: str, max_queries: int = 6) -> List[str]:
                 for ti in range(total_terms):
                     if term_counts[ti] < quotas[ti] and si < len(suffix_indices):
                         term = found[ti]
-                        suffix = ALL_HINT_SUFFIXES[suffix_indices[si]]
+                        suffix = hint_suffixes[suffix_indices[si]]
                         queries.append(f"{term} {suffix}")
                         si += 1
                         term_counts[ti] += 1
@@ -1067,6 +1209,38 @@ JUNK_IMAGE_KEYWORDS = [
 _MD_LINK_ONLY_RE = re.compile(r"^\s*[-*]?\s*\[([^\]]+)\]\(([^)]+)\)\s*$")
 _MD_LINK_RE = re.compile(r"\[[^\]]+\]\([^)]+\)")
 
+# Short social-filler comments ("thanks!", "+1", "lol", "bump", "same
+# here", "following"...) carry no design information, but keyword scoring
+# alone won't catch them -- "that fixed it, thanks!" still contains a
+# prompt-relevant word by accident. This is a cheap, deterministic check
+# (no LLM call, so it applies everywhere -- SE, Reddit, generic forums --
+# not just the narrow Groq-gated Stack Exchange recency reserve).
+_LOW_VALUE_RE = re.compile(
+    r"^(thanks?( you)?( so much)?|ty|tysm|lol+|lmao+|rofl|haha+|hehe+|"
+    r"nice( one| catch| find)?|great( post| find| catch| answer)?|"
+    r"good (catch|point|answer|find)|good!?|cool!?|awesome!?|"
+    r"\+1|same( here| issue| problem)?|me too|this( is it)?\.?|"
+    r"this exactly|exactly( this)?|agreed?|this[!.]*|bump|"
+    r"following|subscribed?|noted|got it|makes sense|"
+    r"came here to say this|underrated comment|"
+    r"[\U0001F44D\U0001F64F\U0001F602\^]+)[\s!.?~]*$",
+    re.IGNORECASE,
+)
+
+
+def _is_low_value_text(text: str) -> bool:
+    """True for short social-filler blocks (thanks/lol/+1/bump/...) that
+    should be dropped even if they'd otherwise score positively.
+    Gated on word count first so a genuinely substantive paragraph that
+    happens to start with "thanks for asking, but..." is never dropped --
+    only near-bare acknowledgments are."""
+    stripped = (text or "").strip()
+    if not stripped:
+        return True
+    if len(stripped.split()) > 12:
+        return False
+    return bool(_LOW_VALUE_RE.match(stripped))
+
 
 def _normalize_image_url(url: str) -> str:
     """Normalize an image URL for deduplication: strip tracking query params,
@@ -1205,6 +1379,8 @@ def extract_interleaved_content(
         else:
             if len(block) < 40:
                 continue  # stray menu items / bare links, not real content
+            if _is_low_value_text(text_without_imgs):
+                continue  # "thanks!", "+1", "lol", "bump" -- filler, not content
             vote_info = _match_block_to_vote(block, votes_map or {})
             vote_count = vote_info.get("votes", 0)
             ts = vote_info.get("timestamp")
@@ -1967,6 +2143,9 @@ def extract_relevant_text(markdown: str, prompt: str, max_chars: int = 6000) -> 
         text = para.strip()
         if len(text) < 40:
             # too short to be real content (stray menu items, single links)
+            continue
+        if _is_low_value_text(text):
+            # "thanks!", "+1", "lol", "bump" -- filler, not content
             continue
         lower = text.lower()
         score = 0

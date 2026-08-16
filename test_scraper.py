@@ -8,6 +8,7 @@ Run:  FIRECRAWL_API_KEY=... python3 test_scraper.py
 import os
 import sys
 import re
+import json
 from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -25,6 +26,8 @@ from scraper import (
     _normalize_image_url,
     _groq_reasonableness_batch,
     generate_search_queries,
+    _heuristic_search_queries,
+    _groq_generate_queries,
     JUNK_IMAGE_KEYWORDS,
     extract_circuit_entries,
     build_circuit_gallery,
@@ -211,7 +214,10 @@ check("Normal page title NOT flagged as challenge",
       _cf_title_re.search("LM386 Audio Amplifier - TI.com") is None)
 
 # -- Fix 1: compound query generation --
-queries = generate_search_queries("Design an Audio Amplifier with LM 386", max_queries=10)
+# Uses _heuristic_search_queries() directly (not generate_search_queries())
+# so these heuristic-specific assertions don't depend on whether a real
+# GROQ_API_KEY happens to be set in the environment/.env.
+queries = _heuristic_search_queries("Design an Audio Amplifier with LM 386", max_queries=10)
 compound = [q for q in queries if "lm386" in q.lower() and "amplifier" in q.lower()]
 check("Compound queries: >=60% contain both lm386 and amplifier",
       len(compound) >= len(queries) * 0.6,
@@ -221,9 +227,33 @@ check("No bare part-number-only queries when compound available",
       f"bare: {[q for q in queries if 'lm386' in q.lower() and 'amplifier' not in q.lower()]}")
 
 # Single-term fallback (no part number): should work normally
-queries_single = generate_search_queries("audio amplifier design", max_queries=6)
+queries_single = _heuristic_search_queries("audio amplifier design", max_queries=6)
 check("Single-term prompt produces queries",
       len(queries_single) > 0 and all("amplifier" in q.lower() for q in queries_single))
+
+# -- Intent-aware query generation: PCB layout/clearance prompts --
+# Regression test for the bug where generate_search_queries() mechanically
+# appended datasheet/BOM/gain-resistor suffixes to EVERY prompt, even ones
+# asking about PCB layout clearance -- completely missing the actual intent.
+clearance_queries = _heuristic_search_queries(
+    "What are the recommended clearances around this LM386?", max_queries=6
+)
+layout_terms = ("clearance", "creepage", "spacing", "layout", "copper pour",
+                 "thermal relief", "ipc-2221", "solder mask", "fabrication")
+layout_relevant = [
+    q for q in clearance_queries
+    if any(term in q.lower() for term in layout_terms)
+]
+check("Clearance prompt: heuristic queries mention layout/clearance terms",
+      len(layout_relevant) == len(clearance_queries),
+      f"queries: {clearance_queries}")
+check("Clearance prompt: heuristic queries do NOT default to datasheet/BOM suffixes",
+      not any("bill of materials" in q.lower() or "gain resistor" in q.lower()
+              for q in clearance_queries),
+      f"queries: {clearance_queries}")
+check("Clearance prompt: part number LM386 still incorporated",
+      any("lm386" in q.lower() for q in clearance_queries),
+      f"queries: {clearance_queries}")
 
 # -- Fix 3: datasheet revision-date stamp --
 check("TI revision stamp matched",
@@ -513,6 +543,87 @@ with patch("scraper.requests.post", side_effect=Exception("timeout")):
     )
 check("Mocked Groq: error returns all indices",
       result == {0, 1, 2})
+
+# -- LLM-based query planner: intent-matching queries via mocked Groq --
+llm_expected = [
+    "LM386 PCB layout clearance recommendations",
+    "IPC-2221 trace clearance guidelines",
+    "LM386 footprint creepage spacing",
+    "audio amplifier IC copper pour clearance",
+]
+with patch("scraper.requests.post",
+           return_value=_mock_resp(json.dumps(llm_expected))):
+    llm_queries = _groq_generate_queries(
+        "What are the recommended clearances around this LM386?",
+        max_queries=6, api_key="fake-key",
+    )
+check("_groq_generate_queries returns mocked intent-matching queries",
+      llm_queries == llm_expected,
+      f"llm_queries: {llm_queries}")
+
+# -- LLM query planner: no API key returns None (caller falls back) --
+# Explicitly clear GROQ_API_KEY for the duration of this check so it's
+# deterministic even when a real key is present via .env.
+_prior_groq_key_2 = os.environ.pop("GROQ_API_KEY", None)
+try:
+    no_key_result = _groq_generate_queries("LM386 clearance", max_queries=6, api_key=None)
+finally:
+    if _prior_groq_key_2 is not None:
+        os.environ["GROQ_API_KEY"] = _prior_groq_key_2
+check("_groq_generate_queries with no key returns None",
+      no_key_result is None)
+
+# -- LLM query planner: API error returns None (caller falls back) --
+with patch("scraper.requests.post", side_effect=Exception("timeout")):
+    llm_error_result = _groq_generate_queries(
+        "LM386 clearance", max_queries=6, api_key="fake-key",
+    )
+check("_groq_generate_queries returns None on API error",
+      llm_error_result is None)
+
+# -- generate_search_queries(): uses LLM path when it succeeds --
+# generate_search_queries() takes no api_key param (must stay backwards
+# compatible with app.py's call site), so it always reads GROQ_API_KEY from
+# the environment -- force one in for this test regardless of what's
+# already in the environment/.env.
+_prior_groq_key = os.environ.get("GROQ_API_KEY")
+os.environ["GROQ_API_KEY"] = "fake-key"
+try:
+    with patch("scraper.requests.post",
+               return_value=_mock_resp(json.dumps(llm_expected))):
+        top_level_llm = generate_search_queries(
+            "What are the recommended clearances around this LM386?", max_queries=6,
+        )
+    check("generate_search_queries() uses Groq LLM output when available",
+          top_level_llm == llm_expected,
+          f"top_level_llm: {top_level_llm}")
+
+    # -- generate_search_queries(): falls back to heuristic on Groq failure --
+    with patch("scraper.requests.post", side_effect=Exception("timeout")):
+        top_level_fallback = generate_search_queries(
+            "What are the recommended clearances around this LM386?", max_queries=6,
+        )
+    check("generate_search_queries() falls back to heuristic path on Groq failure",
+          top_level_fallback == clearance_queries,
+          f"fallback: {top_level_fallback}")
+finally:
+    if _prior_groq_key is None:
+        os.environ.pop("GROQ_API_KEY", None)
+    else:
+        os.environ["GROQ_API_KEY"] = _prior_groq_key
+
+# -- generate_search_queries(): falls back to heuristic when no key set --
+_saved_groq_key = os.environ.pop("GROQ_API_KEY", None)
+try:
+    top_level_nokey = generate_search_queries(
+        "Design an Audio Amplifier with LM 386", max_queries=10,
+    )
+finally:
+    if _saved_groq_key is not None:
+        os.environ["GROQ_API_KEY"] = _saved_groq_key
+check("generate_search_queries() falls back to heuristic path when no GROQ_API_KEY",
+      top_level_nokey == queries,
+      f"nokey: {top_level_nokey}")
 
 # -- Mocked Groq for image context: spam context dropped --
 mock_img_entries = [
