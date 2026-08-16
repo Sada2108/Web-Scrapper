@@ -3,3 +3,9 @@ firecrawl-py>=2.0.0
 python-dotenv>=1.0
 requests>=2.31
 PyMuPDF>=1.25
+
+# forums/ (Reddit + Discourse + XenForo scraper, merged via git subtree)
+playwright
+beautifulsoup4
+lxml
+pandas
